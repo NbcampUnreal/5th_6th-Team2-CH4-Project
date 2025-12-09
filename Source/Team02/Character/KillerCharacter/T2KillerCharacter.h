@@ -52,7 +52,7 @@ protected:
 	void InputAttack(const FInputActionValue& InValue);
 #pragma endregion
 
-/*
+
 #pragma region Attack System
 public:
 	UFUNCTION(BlueprintCallable) 
@@ -73,7 +73,8 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
 #pragma endregion
-
+	
+/*
 #pragma region LandTrap System
 private:
 	UFUNCTION(Server, Reliable, WithValidation)

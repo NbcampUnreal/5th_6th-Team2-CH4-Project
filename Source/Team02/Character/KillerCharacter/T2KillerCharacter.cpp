@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -28,14 +29,16 @@ void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 	if (UEnhancedInputComponent* EIC = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
+		EIC->BindAction(AttackAction, ETriggerEvent::Started,   this, &ThisClass::InputAttack);
 		//EIC->BindAction(LandTrapAction, ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
-		//EIC->BindAction(AttackAction, ETriggerEvent::Started,   this, &ThisClass::InputAttack);
 	}
 }
 
 void AT2KillerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AT2KillerCharacter, bIsAttacking);
 }
 
 void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
@@ -46,4 +49,52 @@ void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
 void AT2KillerCharacter::InputAttack(const FInputActionValue& InValue)
 {
 	UE_LOG(LogTemp, Warning, TEXT("InputAttack called"));
+
+	if (bIsAttacking) return;
+	if (!IsLocallyControlled()) return;
+
+	ServerAttack();
+}
+
+void AT2KillerCharacter::AttackEnd()
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		bIsAttacking = false;
+		UE_LOG(LogTemp, Warning, TEXT("Attack Ended, bIsAttacking reset to false."));
+	}
+}
+
+void AT2KillerCharacter::OnRep_IsAttacking()
+{
+	if (bIsAttacking && AttackMontage)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnRep_IsAttacking: play montage on %s"),
+		   HasAuthority() ? TEXT("Server") : TEXT("Client"));
+
+		PlayAnimMontage(AttackMontage);
+	}
+}
+
+void AT2KillerCharacter::ServerAttack_Implementation()
+{
+	if (bIsAttacking || !AttackMontage) return;
+
+	bIsAttacking = true;
+	float Duration = PlayAnimMontage(AttackMontage);
+	
+	if (Duration > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(
+			AttackTimerHandle,
+			this,
+			&AT2KillerCharacter::AttackEnd,
+			Duration,
+			false
+		);
+	}
+	else
+	{
+		bIsAttacking = false;
+	}
 }
