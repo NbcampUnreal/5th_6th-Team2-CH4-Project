@@ -56,7 +56,6 @@ protected:
 	void InputDash(const FInputActionValue& InValue);
 #pragma endregion
 
-
 #pragma region Attack System
 public:
 	UFUNCTION(BlueprintCallable) 
@@ -78,7 +77,6 @@ protected:
 	void ServerAttack();
 #pragma endregion
 	
-
 #pragma region LandTrap System
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
