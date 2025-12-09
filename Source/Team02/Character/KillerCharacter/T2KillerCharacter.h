@@ -17,7 +17,7 @@ class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 	public:
 	AT2KillerCharacter();
 
-	//virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
@@ -46,13 +46,16 @@ protected:
 	TObjectPtr<UInputAction> LandTrapAction;
 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
-	TObjectPtr<UInputAction> AttackAction; 
+	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> DashAction;
 	
 	void HandleLandTrapInput(const FInputActionValue& InValue);
 	void InputAttack(const FInputActionValue& InValue);
+	void InputDash(const FInputActionValue& InValue);
 #pragma endregion
 
-/*
 #pragma region Attack System
 public:
 	UFUNCTION(BlueprintCallable) 
@@ -73,7 +76,7 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
 #pragma endregion
-
+	
 #pragma region LandTrap System
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -98,6 +101,25 @@ private:
 	UPROPERTY(Replicated) 
 	float LandTrapCooldownEndTime = 0.0f;
 #pragma endregion
-*/
-	
+
+#pragma region Dash System;
+protected:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCDash();
+
+	void ClearDashCooldown();
+
+	UPROPERTY(Replicated)
+	bool bIsDashOnCooldown = false;
+
+	UPROPERTY(EditAnywhere, Category = "Dash")
+	float DashCooldownDuration = 3.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Dash")
+	float DashImpulseStrength = 2000.0f; 
+
+private:
+	FTimerHandle DashCooldownTimerHandle;
+
+#pragma endregion 
 };
