@@ -26,12 +26,7 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
-	FORCEINLINE UCameraComponent* GetCamera() const { return FPSCamera; }
-
 protected:
-	// Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FPSCamera;
 
 	// InputAction
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")

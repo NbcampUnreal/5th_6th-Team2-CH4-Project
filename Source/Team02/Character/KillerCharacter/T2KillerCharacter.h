@@ -24,12 +24,19 @@ class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 #pragma region Killer Character
+public:
+
+	FORCEINLINE UCameraComponent* GetCamera() const { return FPSCamera; }
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* MaskMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* FPSCamera;
 #pragma endregion
 
 #pragma region Killer Input
