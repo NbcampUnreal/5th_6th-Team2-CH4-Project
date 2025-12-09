@@ -17,7 +17,7 @@ class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 	public:
 	AT2KillerCharacter();
 
-	//virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
@@ -74,7 +74,7 @@ protected:
 	void ServerAttack();
 #pragma endregion
 	
-/*
+
 #pragma region LandTrap System
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -99,6 +99,6 @@ private:
 	UPROPERTY(Replicated) 
 	float LandTrapCooldownEndTime = 0.0f;
 #pragma endregion
-*/
+
 	
 };

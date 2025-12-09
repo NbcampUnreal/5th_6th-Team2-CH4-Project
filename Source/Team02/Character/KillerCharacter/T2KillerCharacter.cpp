@@ -5,6 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Gimmick/KillerLandTrap.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
@@ -23,6 +24,20 @@ AT2KillerCharacter::AT2KillerCharacter()
 	WeaponMesh->SetupAttachment(GetMesh(), TEXT("AxeSocket"));
 }
 
+void AT2KillerCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC -> PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->ViewPitchMin = -55.0f; 
+			PC->PlayerCameraManager->ViewPitchMax = 60.0f;  
+		}
+	}
+}
+
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -30,7 +45,7 @@ void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	if (UEnhancedInputComponent* EIC = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EIC->BindAction(AttackAction, ETriggerEvent::Started,   this, &ThisClass::InputAttack);
-		//EIC->BindAction(LandTrapAction, ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
+		EIC->BindAction(LandTrapAction, ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
 	}
 }
 
@@ -39,11 +54,17 @@ void AT2KillerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AT2KillerCharacter, bIsAttacking);
+	DOREPLIFETIME(AT2KillerCharacter, bIsLandTrapOnCooldown);
+	DOREPLIFETIME(AT2KillerCharacter, LandTrapCooldownEndTime);
 }
 
 void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
 {
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("HandleLandTrapInput()")), true, true, FLinearColor::Green, 5.f);
+	if (IsLocallyControlled())
+	{
+		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("HandleLandTrapInput()")), true, true, FLinearColor::Green, 5.f);
+		ServerRPCSpawnLandTrap();
+	}
 }
 
 void AT2KillerCharacter::InputAttack(const FInputActionValue& InValue)
@@ -73,6 +94,51 @@ void AT2KillerCharacter::OnRep_IsAttacking()
 		   HasAuthority() ? TEXT("Server") : TEXT("Client"));
 
 		PlayAnimMontage(AttackMontage);
+	}
+}
+
+void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
+{
+	if (bIsLandTrapOnCooldown)
+	{
+		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("LandTrap Cooldown.")), true, true, FLinearColor::Red, 5.f);
+		return;
+	}
+
+	if (IsValid(LandTrapClass))
+	{
+		FVector SpawnedLocation = (GetActorLocation() + GetActorForwardVector() * 300.f) - FVector(0.f, 0.f, 90.f);
+		AKillerLandTrap* SpawnedLandTrap = GetWorld()->SpawnActor<AKillerLandTrap>(LandTrapClass, SpawnedLocation, FRotator::ZeroRotator);
+
+		if (SpawnedLandTrap)
+		{
+			SpawnedLandTrap->SetOwner(this);
+			
+			bIsLandTrapOnCooldown = true; 
+			UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Trap Placed. %fs Cooldown."), LandTrapCooldownDuration), true, true, FLinearColor::Yellow, 5.f);
+			
+			GetWorldTimerManager().SetTimer(
+				LandTrapCooldownTimerHandle,
+				this,
+				&AT2KillerCharacter::ClearLandTrapCooldown,
+				LandTrapCooldownDuration, 
+				false
+			);
+		}
+	}
+}
+
+bool AT2KillerCharacter::ServerRPCSpawnLandTrap_Validate()
+{
+	return true;
+}
+
+void AT2KillerCharacter::ClearLandTrapCooldown()
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		bIsLandTrapOnCooldown = false;
+		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("LandTrap Ready.")), true, true, FLinearColor::Yellow, 5.f);
 	}
 }
 
