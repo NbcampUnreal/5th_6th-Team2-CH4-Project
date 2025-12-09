@@ -13,5 +13,84 @@ UCLASS()
 class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 {
 	GENERATED_BODY()
+
+	public:
+	AT2KillerCharacter();
+
+	//virtual void BeginPlay() override;
+	
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+#pragma region Killer Character
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* MaskMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* WeaponMesh;
+#pragma endregion
+
+#pragma region Killer Input
+protected:
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> LandTrapAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> AttackAction; 
+	
+	void HandleLandTrapInput(const FInputActionValue& InValue);
+	void InputAttack(const FInputActionValue& InValue);
+#pragma endregion
+
+/*
+#pragma region Attack System
+public:
+	UFUNCTION(BlueprintCallable) 
+	void AttackEnd();
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category="Attack")
+	UAnimMontage* AttackMontage;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsAttacking)
+	bool bIsAttacking = false;
+
+	FTimerHandle AttackTimerHandle;
+
+	UFUNCTION()
+	void OnRep_IsAttacking();
+
+	UFUNCTION(Server, Reliable)
+	void ServerAttack();
+#pragma endregion
+
+#pragma region LandTrap System
+private:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCSpawnLandTrap();
+
+	UFUNCTION()
+	void ClearLandTrapCooldown();
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="LandTrap")
+	TSubclassOf<AActor> LandTrapClass;
+
+	UPROPERTY(Replicated) 
+	bool bIsLandTrapOnCooldown = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
+	float LandTrapCooldownDuration = 15.0f;
+
+private:
+	FTimerHandle LandTrapCooldownTimerHandle;
+
+	UPROPERTY(Replicated) 
+	float LandTrapCooldownEndTime = 0.0f;
+#pragma endregion
+*/
 	
 };
