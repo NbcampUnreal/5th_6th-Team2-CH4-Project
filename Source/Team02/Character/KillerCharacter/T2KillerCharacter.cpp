@@ -165,7 +165,7 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 
 	if (bIsAttacking) return;
 
-	float DashStrength = 3000.0f;
+	float DashStrength = 1000.0f;
 	FVector DashVelocity = GetActorForwardVector() * DashStrength;
 	DashVelocity.Z = 200.0f;
 
