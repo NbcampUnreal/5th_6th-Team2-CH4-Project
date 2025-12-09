@@ -9,7 +9,11 @@
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
+	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
 	FPSCamera->SetupAttachment(GetMesh(), TEXT("head"));
+	FPSCamera->bUsePawnControlRotation = true;
+	FPSCamera->SetRelativeLocation(FVector(6.0f, 25.0f, 0.0f));
+	FPSCamera->SetRelativeRotation(FRotator(0.0f, 90.0f, -90.0f));
 
 	MaskMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MaskMesh"));
 	MaskMesh->SetupAttachment(GetMesh(), TEXT("headSocket"));

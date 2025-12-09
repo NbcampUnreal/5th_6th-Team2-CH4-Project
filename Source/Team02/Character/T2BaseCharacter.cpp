@@ -22,11 +22,6 @@ AT2BaseCharacter::AT2BaseCharacter()
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
-
-	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
-	FPSCamera->bUsePawnControlRotation = true;
-	FPSCamera->SetRelativeLocation(FVector(6.0f, 25.0f, 0.0f));
-	FPSCamera->SetRelativeRotation(FRotator(0.0f, 90.0f, -90.0f));
 }
 
 void AT2BaseCharacter::BeginPlay()
