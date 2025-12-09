@@ -8,6 +8,7 @@
 #include "Gimmick/KillerLandTrap.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -44,8 +45,9 @@ void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 	if (UEnhancedInputComponent* EIC = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EIC->BindAction(AttackAction, ETriggerEvent::Started,   this, &ThisClass::InputAttack);
-		EIC->BindAction(LandTrapAction, ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
+		EIC->BindAction(AttackAction,	ETriggerEvent::Started, this, &ThisClass::InputAttack);
+		EIC->BindAction(LandTrapAction,	ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
+		EIC->BindAction(DashAction,		ETriggerEvent::Started,	this, &ThisClass::InputDash);
 	}
 }
 
@@ -56,6 +58,7 @@ void AT2KillerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 	DOREPLIFETIME(AT2KillerCharacter, bIsAttacking);
 	DOREPLIFETIME(AT2KillerCharacter, bIsLandTrapOnCooldown);
 	DOREPLIFETIME(AT2KillerCharacter, LandTrapCooldownEndTime);
+	DOREPLIFETIME(AT2KillerCharacter, bIsDashOnCooldown);
 }
 
 void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
@@ -75,6 +78,16 @@ void AT2KillerCharacter::InputAttack(const FInputActionValue& InValue)
 	if (!IsLocallyControlled()) return;
 
 	ServerAttack();
+}
+
+void AT2KillerCharacter::InputDash(const FInputActionValue& InValue)
+{
+	UE_LOG(LogTemp, Warning, TEXT("InputDash called"));
+	if (IsLocallyControlled())
+	{
+		ServerRPCDash();
+	}
+	
 }
 
 void AT2KillerCharacter::AttackEnd()
@@ -140,6 +153,45 @@ void AT2KillerCharacter::ClearLandTrapCooldown()
 		bIsLandTrapOnCooldown = false;
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("LandTrap Ready.")), true, true, FLinearColor::Yellow, 5.f);
 	}
+}
+
+void AT2KillerCharacter::ServerRPCDash_Implementation()
+{
+	if (bIsDashOnCooldown)
+	{
+		UKismetSystemLibrary::PrintString(this, TEXT("Dash Cooldown!"), true, true, FLinearColor::Red, 2.f);
+		return;
+	}
+
+	if (bIsAttacking) return;
+
+	float DashStrength = 3000.0f;
+	FVector DashVelocity = GetActorForwardVector() * DashStrength;
+	DashVelocity.Z = 200.0f;
+
+	LaunchCharacter(DashVelocity, true, true);
+
+	bIsDashOnCooldown = true;
+	UKismetSystemLibrary::PrintString(this, TEXT("Dash!"), true, true, FLinearColor::Blue, 2.f);
+
+	GetWorldTimerManager().SetTimer(
+		DashCooldownTimerHandle,
+		this,
+		&AT2KillerCharacter::ClearDashCooldown,
+		DashCooldownDuration,
+		false
+	);
+}
+
+bool AT2KillerCharacter::ServerRPCDash_Validate()
+{
+	return true;
+}
+
+void AT2KillerCharacter::ClearDashCooldown()
+{
+	bIsDashOnCooldown = false;
+	UKismetSystemLibrary::PrintString(this, TEXT("Dash Ready"), true, true, FLinearColor::Green, 2.f);
 }
 
 void AT2KillerCharacter::ServerAttack_Implementation()
