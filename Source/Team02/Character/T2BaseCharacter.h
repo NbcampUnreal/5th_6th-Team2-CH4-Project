@@ -41,4 +41,13 @@ protected:
 	void HandleMoveInput(const FInputActionValue& InValue);
 	
 	void HandleLookInput(const FInputActionValue& InValue);
+
+
+#pragma region Crouch
+public:
+	bool bIsCrouching = false;
+
+	bool GetIsCrouching() { return bIsCrouching; }
+
+#pragma endregion
 };

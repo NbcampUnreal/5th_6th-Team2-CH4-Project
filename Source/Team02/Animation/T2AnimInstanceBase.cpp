@@ -32,4 +32,6 @@ void UT2AnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	bShouldMove = (!OwnerCharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero()) && (GroundSpeed > 3.f);
 	
 	bIsFalling = OwnerCharacterMovementComponent->IsFalling();
+
+	bIsCroucing = OwnerCharacter->GetIsCrouching();
 }
