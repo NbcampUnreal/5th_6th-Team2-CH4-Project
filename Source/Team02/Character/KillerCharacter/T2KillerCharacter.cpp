@@ -9,6 +9,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Component/T2CooldownComponent.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -23,6 +24,8 @@ AT2KillerCharacter::AT2KillerCharacter()
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon"));
 	WeaponMesh->SetupAttachment(GetMesh(), TEXT("AxeSocket"));
+
+	CooldownComponent = CreateDefaultSubobject<UT2CooldownComponent>(TEXT("CooldownComponent"));
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -56,31 +59,12 @@ void AT2KillerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AT2KillerCharacter, bIsAttacking);
-	DOREPLIFETIME(AT2KillerCharacter, bIsLandTrapOnCooldown);
-	DOREPLIFETIME(AT2KillerCharacter, LandTrapCooldownEndTime);
-	DOREPLIFETIME(AT2KillerCharacter, bIsDashOnCooldown);
 }
 
 void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
 {
 	if (IsLocallyControlled() == true)
 	{
-		if (bIsLandTrapOnCooldown)
-		{
-			float Progress = GetLandTrapCooldownProgress();
-			float RemainingTime = (1.0f - Progress) * LandTrapCooldownDuration;
-            
-			UKismetSystemLibrary::PrintString(
-				this, 
-				FString::Printf(TEXT("LandTrap is on Cooldown. Remaining: %.1f seconds."), RemainingTime), 
-				true, 
-				true, 
-				FLinearColor::Red, 
-				5.f
-			);
-			return;
-		}
-		
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("HandleLandTrapInput()")), true, true, FLinearColor::Green, 5.f);
 		ServerRPCSpawnLandTrap();
 	}
@@ -128,12 +112,16 @@ void AT2KillerCharacter::OnRep_IsAttacking()
 
 void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
 {
-	if (bIsLandTrapOnCooldown)
-	{
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("LandTrap Cooldown.")), true, true, FLinearColor::Red, 5.f);
-		return;
-	}
 
+	if (IsValid(CooldownComponent))
+	{
+		if (CooldownComponent->GetIsLandTrapOnCooldown())
+		{
+			UKismetSystemLibrary::PrintString(this, TEXT("LandTrap Cooldown Active!"), true, true, FLinearColor::Red, 2.f);
+			return;
+		}
+	}
+    
 	if (IsValid(LandTrapClass))
 	{
 		FVector SpawnedLocation = (GetActorLocation() + GetActorForwardVector() * 300.f) - FVector(0.f, 0.f, 90.f);
@@ -142,17 +130,11 @@ void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
 		if (SpawnedLandTrap)
 		{
 			SpawnedLandTrap->SetOwner(this);
-			
-			bIsLandTrapOnCooldown = true; 
-			UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Trap Placed. %fs Cooldown."), LandTrapCooldownDuration), true, true, FLinearColor::Yellow, 5.f);
-			
-			GetWorldTimerManager().SetTimer(
-				LandTrapCooldownTimerHandle,
-				this,
-				&AT2KillerCharacter::ClearLandTrapCooldown,
-				LandTrapCooldownDuration, 
-				false
-			);
+            
+			if (IsValid(CooldownComponent))
+			{
+				CooldownComponent->StartLandTrapCooldown();
+			}
 		}
 	}
 }
@@ -162,41 +144,18 @@ bool AT2KillerCharacter::ServerRPCSpawnLandTrap_Validate()
 	return true;
 }
 
-void AT2KillerCharacter::ClearLandTrapCooldown()
-{
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		bIsLandTrapOnCooldown = false;
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("LandTrap Ready.")), true, true, FLinearColor::Yellow, 5.f);
-	}
-}
-
-float AT2KillerCharacter::GetLandTrapCooldownProgress() const
-{
-	if (!bIsLandTrapOnCooldown)
-	{
-		return 1.0f;
-	}
-
-	if (UWorld* World = GetWorld())
-	{
-		float CurrentTime = World->GetTimeSeconds();
-		float ElapsedTime = CurrentTime - LandTrapCooldownStartTime; 
-		float Progress = ElapsedTime / LandTrapCooldownDuration; 
-		return FMath::Clamp(Progress, 0.0f, 1.0f);
-	}
-    
-	return 0.0f;
-}
 
 void AT2KillerCharacter::ServerRPCDash_Implementation()
 {
-	if (bIsDashOnCooldown)
+	if (IsValid(CooldownComponent))
 	{
-		UKismetSystemLibrary::PrintString(this, TEXT("Dash Cooldown!"), true, true, FLinearColor::Red, 2.f);
-		return;
+		if (CooldownComponent->GetIsDashOnCooldown()) 
+		{
+			UKismetSystemLibrary::PrintString(this, TEXT("Dash Cooldown Active!"), true, true, FLinearColor::Red, 2.f);
+			return;
+		}
 	}
-
+	
 	if (bIsAttacking) return;
 
 	float DashStrength = 1000.0f;
@@ -205,32 +164,17 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 
 	LaunchCharacter(DashVelocity, true, true);
 
-	bIsDashOnCooldown = true;
 	UKismetSystemLibrary::PrintString(this, TEXT("Dash!"), true, true, FLinearColor::Blue, 2.f);
 
-	if (UWorld* World = GetWorld())
+	if (IsValid(CooldownComponent))
 	{
-		LandTrapCooldownStartTime = World->GetTimeSeconds();
+		CooldownComponent->StartDashCooldown();
 	}
-	
-	GetWorldTimerManager().SetTimer(
-		DashCooldownTimerHandle,
-		this,
-		&AT2KillerCharacter::ClearDashCooldown,
-		DashCooldownDuration,
-		false
-	);
 }
 
 bool AT2KillerCharacter::ServerRPCDash_Validate()
 {
 	return true;
-}
-
-void AT2KillerCharacter::ClearDashCooldown()
-{
-	bIsDashOnCooldown = false;
-	UKismetSystemLibrary::PrintString(this, TEXT("Dash Ready"), true, true, FLinearColor::Green, 2.f);
 }
 
 void AT2KillerCharacter::ServerAttack_Implementation()

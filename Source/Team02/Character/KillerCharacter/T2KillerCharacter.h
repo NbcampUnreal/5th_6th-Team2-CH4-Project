@@ -6,6 +6,11 @@
 #include "Character/T2BaseCharacter.h"
 #include "T2KillerCharacter.generated.h"
 
+class UCameraComponent;
+class UStaticMeshComponent;
+class UT2CooldownComponent;
+class UUW_KillerHUD;
+
 /**
  * 
  */
@@ -37,6 +42,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FPSCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UT2CooldownComponent> CooldownComponent;
+
 #pragma endregion
 
 #pragma region Killer Input
@@ -82,29 +91,10 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCSpawnLandTrap();
 
-	UFUNCTION()
-	void ClearLandTrapCooldown();
-
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="LandTrap")
 	TSubclassOf<AActor> LandTrapClass;
 
-	UPROPERTY(Replicated) 
-	bool bIsLandTrapOnCooldown = false;
-
-	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
-	float LandTrapCooldownDuration = 15.0f;
-
-	UFUNCTION(BlueprintPure, Category = "LandTrap")
-	float GetLandTrapCooldownProgress() const;
-
-private:
-	FTimerHandle LandTrapCooldownTimerHandle;
-
-	float LandTrapCooldownStartTime = 0.0f;
-	
-	UPROPERTY(Replicated) 
-	float LandTrapCooldownEndTime = 0.0f;
 #pragma endregion
 
 #pragma region Dash System;
@@ -112,19 +102,9 @@ protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCDash();
 
-	void ClearDashCooldown();
-
-	UPROPERTY(Replicated)
-	bool bIsDashOnCooldown = false;
-
+protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashCooldownDuration = 3.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashImpulseStrength = 2000.0f; 
-
-private:
-	FTimerHandle DashCooldownTimerHandle;
+	float DashImpulseStrength = 2000.0f;
 
 #pragma endregion 
 };
