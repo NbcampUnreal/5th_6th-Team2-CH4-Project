@@ -63,8 +63,24 @@ void AT2KillerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 
 void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() == true)
 	{
+		if (bIsLandTrapOnCooldown)
+		{
+			float Progress = GetLandTrapCooldownProgress();
+			float RemainingTime = (1.0f - Progress) * LandTrapCooldownDuration;
+            
+			UKismetSystemLibrary::PrintString(
+				this, 
+				FString::Printf(TEXT("LandTrap is on Cooldown. Remaining: %.1f seconds."), RemainingTime), 
+				true, 
+				true, 
+				FLinearColor::Red, 
+				5.f
+			);
+			return;
+		}
+		
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("HandleLandTrapInput()")), true, true, FLinearColor::Green, 5.f);
 		ServerRPCSpawnLandTrap();
 	}
@@ -155,6 +171,24 @@ void AT2KillerCharacter::ClearLandTrapCooldown()
 	}
 }
 
+float AT2KillerCharacter::GetLandTrapCooldownProgress() const
+{
+	if (!bIsLandTrapOnCooldown)
+	{
+		return 1.0f;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		float CurrentTime = World->GetTimeSeconds();
+		float ElapsedTime = CurrentTime - LandTrapCooldownStartTime; 
+		float Progress = ElapsedTime / LandTrapCooldownDuration; 
+		return FMath::Clamp(Progress, 0.0f, 1.0f);
+	}
+    
+	return 0.0f;
+}
+
 void AT2KillerCharacter::ServerRPCDash_Implementation()
 {
 	if (bIsDashOnCooldown)
@@ -174,6 +208,11 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 	bIsDashOnCooldown = true;
 	UKismetSystemLibrary::PrintString(this, TEXT("Dash!"), true, true, FLinearColor::Blue, 2.f);
 
+	if (UWorld* World = GetWorld())
+	{
+		LandTrapCooldownStartTime = World->GetTimeSeconds();
+	}
+	
 	GetWorldTimerManager().SetTimer(
 		DashCooldownTimerHandle,
 		this,
