@@ -95,9 +95,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
 	float LandTrapCooldownDuration = 15.0f;
 
+	UFUNCTION(BlueprintPure, Category = "LandTrap")
+	float GetLandTrapCooldownProgress() const;
+
 private:
 	FTimerHandle LandTrapCooldownTimerHandle;
 
+	float LandTrapCooldownStartTime = 0.0f;
+	
 	UPROPERTY(Replicated) 
 	float LandTrapCooldownEndTime = 0.0f;
 #pragma endregion

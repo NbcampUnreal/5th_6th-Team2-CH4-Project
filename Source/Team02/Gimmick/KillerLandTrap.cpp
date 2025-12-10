@@ -3,6 +3,7 @@
 
 #include "Gimmick/KillerLandTrap.h"
 
+#include "Character/KillerCharacter/T2KillerCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -78,6 +79,11 @@ void AKillerLandTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AKillerLandTrap::OnLandTrapBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
+	if (OtherActor && OtherActor->IsA<AT2KillerCharacter>())
+	{
+		return;
+	}
+	
 	if (HasAuthority() == true)
 	{
 		if (bIsExploded == true)
