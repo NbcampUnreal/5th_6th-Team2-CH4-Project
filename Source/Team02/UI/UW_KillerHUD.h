@@ -3,14 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerController.h"
-#include "T2PlayerController.generated.h"
+#include "Blueprint/UserWidget.h"
+#include "UW_KillerHUD.generated.h"
+
+class UT2CooldownComponent;
 
 /**
  * 
  */
 UCLASS()
-class TEAM02_API AT2PlayerController : public APlayerController
+class TEAM02_API UUW_KillerHUD : public UUserWidget
 {
 	GENERATED_BODY()
 	
