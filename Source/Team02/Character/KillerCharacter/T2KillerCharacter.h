@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/T2BaseCharacter.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "T2KillerCharacter.generated.h"
 
 class UCameraComponent;
@@ -43,6 +44,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FPSCamera;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* CameraBoom; 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* ThirdPersonCamera; 
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UT2CooldownComponent> CooldownComponent;
 
@@ -50,6 +57,8 @@ protected:
 
 #pragma region Killer Input
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> ToggleCameraAction;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> LandTrapAction;
@@ -63,6 +72,13 @@ protected:
 	void HandleLandTrapInput(const FInputActionValue& InValue);
 	void InputAttack(const FInputActionValue& InValue);
 	void InputDash(const FInputActionValue& InValue);
+	void ToggleCameraView(const FInputActionValue& InValue);
+#pragma endregion
+
+#pragma region Camera View System
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Camera")
+	bool bIsFirstPerson = true;
 #pragma endregion
 
 #pragma region Attack System

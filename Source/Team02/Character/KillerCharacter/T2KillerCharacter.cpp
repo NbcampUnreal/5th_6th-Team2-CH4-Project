@@ -10,6 +10,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Component/T2CooldownComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -18,6 +19,16 @@ AT2KillerCharacter::AT2KillerCharacter()
 	FPSCamera->bUsePawnControlRotation = true;
 	FPSCamera->SetRelativeLocation(FVector(6.0f, 25.0f, 0.0f));
 	FPSCamera->SetRelativeRotation(FRotator(0.0f, 90.0f, -90.0f));
+
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom")); 
+	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->TargetArmLength = 400.0f; 
+	CameraBoom->bUsePawnControlRotation = true; 
+	CameraBoom->SocketOffset = FVector(0.0f, 0.0f, 50.0f);
+
+	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ThirdPersonCamera"));
+	ThirdPersonCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); 
+	ThirdPersonCamera->bUsePawnControlRotation = false;
 
 	MaskMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MaskMesh"));
 	MaskMesh->SetupAttachment(GetMesh(), TEXT("headSocket"));
@@ -40,6 +51,13 @@ void AT2KillerCharacter::BeginPlay()
 			PC->PlayerCameraManager->ViewPitchMax = 60.0f;  
 		}
 	}
+
+	if (FPSCamera && ThirdPersonCamera)
+	{
+		FPSCamera->SetActive(true);
+		ThirdPersonCamera->SetActive(false);
+		bIsFirstPerson = true;
+	}
 }
 
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -51,6 +69,7 @@ void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 		EIC->BindAction(AttackAction,	ETriggerEvent::Started, this, &ThisClass::InputAttack);
 		EIC->BindAction(LandTrapAction,	ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
 		EIC->BindAction(DashAction,		ETriggerEvent::Started,	this, &ThisClass::InputDash);
+		EIC->BindAction(ToggleCameraAction, ETriggerEvent::Started, this, &ThisClass::ToggleCameraView);
 	}
 }
 
@@ -88,6 +107,41 @@ void AT2KillerCharacter::InputDash(const FInputActionValue& InValue)
 		ServerRPCDash();
 	}
 	
+}
+
+void AT2KillerCharacter::ToggleCameraView(const FInputActionValue& InValue)
+{
+	if (!IsLocallyControlled()) return;
+	
+	if (FPSCamera && ThirdPersonCamera)
+	{
+		if (bIsFirstPerson)
+		{
+			FPSCamera->SetActive(false);
+			ThirdPersonCamera->SetActive(true);
+
+			bUseControllerRotationYaw = false;
+
+			GetCharacterMovement()->bOrientRotationToMovement = true; 
+			GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
+			
+			UKismetSystemLibrary::PrintString(this, TEXT("3rd Person View"), true, true, FLinearColor::Yellow, 2.f);
+		}
+		else
+		{
+			// 3인칭 -> 1인칭 전환
+			ThirdPersonCamera->SetActive(false);
+			FPSCamera->SetActive(true);
+
+			bUseControllerRotationYaw = true; 
+			
+			GetCharacterMovement()->bOrientRotationToMovement = false; 
+			
+			UKismetSystemLibrary::PrintString(this, TEXT("1st Person View"), true, true, FLinearColor::Yellow, 2.f);
+		}
+		
+		bIsFirstPerson = !bIsFirstPerson;
+	}
 }
 
 void AT2KillerCharacter::AttackEnd()
