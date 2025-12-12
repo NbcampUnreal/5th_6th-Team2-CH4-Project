@@ -18,6 +18,8 @@ protected:
     virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 
+    virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
+
     UPROPERTY(EditDefaultsOnly, Category = "Characters")
     TSubclassOf<APawn> KillerClass;
 

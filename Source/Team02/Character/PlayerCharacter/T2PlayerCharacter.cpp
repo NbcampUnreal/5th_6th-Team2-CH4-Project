@@ -11,6 +11,8 @@ AT2PlayerCharacter::AT2PlayerCharacter()
 	FlashlightMesh->SetupAttachment(GetMesh());
 
 	FlashlightComp = CreateDefaultSubobject<UFlashlightComponent>(TEXT("FlashlightComponent"));
+
+	GetCharacterMovement()->MaxWalkSpeed = 300.f;
 }
 
 void AT2PlayerCharacter::BeginPlay()
