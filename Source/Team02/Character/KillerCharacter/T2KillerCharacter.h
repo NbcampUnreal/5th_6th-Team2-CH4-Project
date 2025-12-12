@@ -7,6 +7,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "T2KillerCharacter.generated.h"
 
+class USoundBase;
 class UCameraComponent;
 class UStaticMeshComponent;
 class UT2CooldownComponent;
@@ -68,11 +69,18 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UInputAction> DashAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> WalkAction;
 	
 	void HandleLandTrapInput(const FInputActionValue& InValue);
 	void InputAttack(const FInputActionValue& InValue);
 	void InputDash(const FInputActionValue& InValue);
 	void ToggleCameraView(const FInputActionValue& InValue);
+
+	void StartWalk();
+	void EndWalk();
+	
 #pragma endregion
 
 #pragma region Camera View System
@@ -113,7 +121,7 @@ protected:
 
 #pragma endregion
 
-#pragma region Dash System;
+#pragma region Dash System
 protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCDash();
@@ -122,5 +130,29 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashImpulseStrength = 2000.0f;
 
-#pragma endregion 
+#pragma endregion
+
+#pragma region Walk System
+public:
+	UFUNCTION(BlueprintCallable, Category = "Footstep")
+	void PlayFootstepSound(bool bIsLeftFoot);
+	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsWalking = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WalkSpeedMultiplier = 0.20f; 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float BaseMaxWalkSpeed = 600.0f;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Footstep")
+	TObjectPtr<USoundBase> FootstepSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Footstep", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WalkVolumeMultiplier = 0.15f;
+
+#pragma endregion
 };
