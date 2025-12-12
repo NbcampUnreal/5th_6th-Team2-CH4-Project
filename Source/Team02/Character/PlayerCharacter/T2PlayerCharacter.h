@@ -6,6 +6,8 @@
 
 
 class UFlashlightComponent;
+class USpringArmComponent;
+class UCamera;
 
 UCLASS()
 class TEAM02_API AT2PlayerCharacter : public AT2BaseCharacter
@@ -24,6 +26,18 @@ public:
 	void HandleFlashlightInput(const FInputActionValue& InValue);
 	
 public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<USpringArmComponent> SpringArmComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UCameraComponent> ThirdPersonCamera;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UCameraComponent> FirstPersonCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<USkeletalMeshComponent> FirstPersonArms;
+
 	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly)
 	TObjectPtr<USkeletalMeshComponent> FlashlightMesh;
 
@@ -38,5 +52,19 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> FlashlightInput;
+
+
+
+#pragma region TEST
+public:
+
+	void HandleViewModeInput(const FInputActionValue& InValue);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ViewModeInput;
+
+	bool bShowFullBody = false;
+
+#pragma endregion
 
 };
