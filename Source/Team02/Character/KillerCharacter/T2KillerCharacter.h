@@ -155,4 +155,16 @@ protected:
 	float WalkVolumeMultiplier = 0.15f;
 
 #pragma endregion
+<<<<<<< HEAD
+=======
+
+#pragma region Fog System
+private:
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USceneComponent> FootAnchor;
+    
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UT2FogComponent> FootFog;
+#pragma endregion 
+>>>>>>> Feature/PJH
 };

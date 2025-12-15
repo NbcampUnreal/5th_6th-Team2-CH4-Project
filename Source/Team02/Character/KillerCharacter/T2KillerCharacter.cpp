@@ -39,6 +39,15 @@ AT2KillerCharacter::AT2KillerCharacter()
 	WeaponMesh->SetupAttachment(GetMesh(), TEXT("AxeSocket"));
 
 	CooldownComponent = CreateDefaultSubobject<UT2CooldownComponent>(TEXT("CooldownComponent"));
+<<<<<<< HEAD
+=======
+
+	FootAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("FootAnchor"));
+	FootAnchor->SetupAttachment(GetMesh());
+	FootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("FootFog"));
+	FootFog->SetupAttachment(FootAnchor);
+	
+>>>>>>> Feature/PJH
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -65,6 +74,14 @@ void AT2KillerCharacter::BeginPlay()
 	{
 		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	}
+<<<<<<< HEAD
+=======
+	
+	if (GetMesh())
+	{
+		FootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_lSocket"));
+	}
+>>>>>>> Feature/PJH
 }
 
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
