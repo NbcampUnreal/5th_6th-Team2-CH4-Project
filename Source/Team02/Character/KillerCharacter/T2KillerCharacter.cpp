@@ -73,10 +73,6 @@ void AT2KillerCharacter::BeginPlay()
 		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	}
 	
-	if (GetMesh())
-	{
-		FootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_lSocket"));
-	}
 }
 
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
