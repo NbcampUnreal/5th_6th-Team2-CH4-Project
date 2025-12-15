@@ -45,6 +45,8 @@ public:
 	UFUNCTION()
 	void OnRep_FlashlightOn();
 
+	void ApplyFlashlightState();
+
 public:
 	UFUNCTION(Server, Reliable)
 	void Server_ToggleFlashlight();

@@ -56,6 +56,7 @@ void UFlashlightComponent::Server_ToggleFlashlight_Implementation()
 	{
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Flashlight OFF!")), true, true, FLinearColor::Red, 5.f);
 	}
+	ApplyFlashlightState();   //  서버 / Standalone 화면용
 }
 
 void UFlashlightComponent::DrainBattery(float DeltaTime)
@@ -83,15 +84,22 @@ void UFlashlightComponent::OnRep_Battery()
 
 void UFlashlightComponent::OnRep_FlashlightOn()
 {
+	
+	ApplyFlashlightState();  // 원격 클라이언트 화면용
+}
+
+void UFlashlightComponent::ApplyFlashlightState()
+{
+
 	if (!CachedSpotLight) return;
 
 	CachedSpotLight->SetVisibility(bIsOn);
 
 	APawn* PawnOnwer = Cast<APawn>(GetOwner());
-	
+
 	if (!PawnOnwer) return;
-	
-	if(bIsOn)
+
+	if (bIsOn)
 	{
 		if (PawnOnwer->IsLocallyControlled())
 		{
