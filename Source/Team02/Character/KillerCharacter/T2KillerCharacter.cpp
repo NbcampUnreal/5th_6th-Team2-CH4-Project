@@ -42,14 +42,11 @@ AT2KillerCharacter::AT2KillerCharacter()
 
 	CooldownComponent = CreateDefaultSubobject<UT2CooldownComponent>(TEXT("CooldownComponent"));
 
-	LeftFootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("LeftFootFog"));
-	RightFootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("RightFootFog"));
-
-	LeftFootFog->SetupAttachment(GetMesh());
-	RightFootFog->SetupAttachment(GetMesh());
-
-	LeftFootFog->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
-	RightFootFog->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+	FootAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("FootAnchor"));
+	FootAnchor->SetupAttachment(GetMesh());
+	FootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("FootFog"));
+	FootFog->SetupAttachment(FootAnchor);
+	
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -79,8 +76,7 @@ void AT2KillerCharacter::BeginPlay()
 	
 	if (GetMesh())
 	{
-		LeftFootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_l"));
-		RightFootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_r"));
+		FootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_lSocket"));
 	}
 }
 

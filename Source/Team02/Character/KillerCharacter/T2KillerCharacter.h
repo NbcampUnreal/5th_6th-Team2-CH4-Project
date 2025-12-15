@@ -159,12 +159,11 @@ protected:
 #pragma endregion
 
 #pragma region Fog System
-	
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Effects", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UT2FogComponent> LeftFootFog;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Effects", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UT2FogComponent> RightFootFog;
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USceneComponent> FootAnchor;
+    
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UT2FogComponent> FootFog;
 #pragma endregion 
 };

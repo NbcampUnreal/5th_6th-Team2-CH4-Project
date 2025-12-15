@@ -19,5 +19,4 @@ public:
 
 	void InitializeFog(USceneComponent* Parent, FName SocketName);
 
-	void SetFogScale(float NewScale);
 };
