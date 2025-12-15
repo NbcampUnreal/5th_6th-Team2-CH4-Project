@@ -12,6 +12,7 @@ class UCameraComponent;
 class UStaticMeshComponent;
 class UT2CooldownComponent;
 class UUW_KillerHUD;
+class UT2FogComponent;
 
 /**
  * 
@@ -155,8 +156,6 @@ protected:
 	float WalkVolumeMultiplier = 0.15f;
 
 #pragma endregion
-<<<<<<< HEAD
-=======
 
 #pragma region Fog System
 private:
@@ -166,5 +165,4 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UT2FogComponent> FootFog;
 #pragma endregion 
->>>>>>> Feature/PJH
 };
