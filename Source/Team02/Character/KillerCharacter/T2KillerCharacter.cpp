@@ -11,6 +11,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Component/T2CooldownComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -58,6 +60,11 @@ void AT2KillerCharacter::BeginPlay()
 		ThirdPersonCamera->SetActive(false);
 		bIsFirstPerson = true;
 	}
+
+	if (GetCharacterMovement())
+	{
+		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	}
 }
 
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -70,6 +77,9 @@ void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 		EIC->BindAction(LandTrapAction,	ETriggerEvent::Started, this, &ThisClass::HandleLandTrapInput);
 		EIC->BindAction(DashAction,		ETriggerEvent::Started,	this, &ThisClass::InputDash);
 		EIC->BindAction(ToggleCameraAction, ETriggerEvent::Started, this, &ThisClass::ToggleCameraView);
+
+		EIC->BindAction(WalkAction, ETriggerEvent::Triggered, this, &ThisClass::StartWalk); 
+		EIC->BindAction(WalkAction, ETriggerEvent::Completed, this, &ThisClass::EndWalk);
 	}
 }
 
@@ -123,25 +133,45 @@ void AT2KillerCharacter::ToggleCameraView(const FInputActionValue& InValue)
 			bUseControllerRotationYaw = false;
 
 			GetCharacterMovement()->bOrientRotationToMovement = true; 
-			GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
+			GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
 			
 			UKismetSystemLibrary::PrintString(this, TEXT("3rd Person View"), true, true, FLinearColor::Yellow, 2.f);
 		}
 		else
 		{
-			// 3인칭 -> 1인칭 전환
 			ThirdPersonCamera->SetActive(false);
 			FPSCamera->SetActive(true);
 
 			bUseControllerRotationYaw = true; 
 			
-			GetCharacterMovement()->bOrientRotationToMovement = false; 
+			GetCharacterMovement()->bOrientRotationToMovement = false;
+			GetCharacterMovement()->RotationRate = FRotator(0.0f, 3600.0f, 0.0f);
 			
 			UKismetSystemLibrary::PrintString(this, TEXT("1st Person View"), true, true, FLinearColor::Yellow, 2.f);
 		}
 		
 		bIsFirstPerson = !bIsFirstPerson;
 	}
+}
+
+void AT2KillerCharacter::StartWalk()
+{
+	if (!GetCharacterMovement() || bIsWalking) return;
+
+	bIsWalking = true;
+	GetCharacterMovement()->MaxWalkSpeed = BaseMaxWalkSpeed * WalkSpeedMultiplier;
+
+	UKismetSystemLibrary::PrintString(this, TEXT("Walk Started"), true, true, FLinearColor::Blue, 1.f);
+}
+
+void AT2KillerCharacter::EndWalk()
+{
+	if (!GetCharacterMovement() || !bIsWalking) return;
+
+	bIsWalking = false;
+	GetCharacterMovement()->MaxWalkSpeed = BaseMaxWalkSpeed;
+	
+	UKismetSystemLibrary::PrintString(this, TEXT("Walk Ended (Run)"), true, true, FLinearColor::Blue, 1.f);
 }
 
 void AT2KillerCharacter::AttackEnd()
@@ -162,6 +192,41 @@ void AT2KillerCharacter::OnRep_IsAttacking()
 
 		PlayAnimMontage(AttackMontage);
 	}
+}
+
+void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
+{
+	if (!FootstepSound) return;
+	
+	
+	float VolumeToUse = 0.7f; 
+	if (bIsWalking)
+	{
+		VolumeToUse = WalkVolumeMultiplier; 
+	}
+	
+
+	const FName FootSocketName = bIsLeftFoot ? FName(TEXT("foot_l")) : FName(TEXT("foot_r"));
+    
+	FVector FootLocation = GetActorLocation();
+
+	if (GetMesh())
+	{
+		FootLocation = GetMesh()->GetSocketLocation(FootSocketName);
+	}
+
+	UGameplayStatics::SpawnSoundAtLocation(
+		this, 
+		FootstepSound, 
+		FootLocation, 
+		FRotator::ZeroRotator, 
+		VolumeToUse, 
+		1.0f 
+	);
+
+	FString FootstepType = bIsWalking ? TEXT("Walk") : TEXT("Run");
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Footstep: %s (Vol: %.2f) at %s"), *FootstepType, VolumeToUse, *FootSocketName.ToString()), true, true, FLinearColor::White, 0.5f);
+
 }
 
 void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
@@ -214,7 +279,7 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 
 	float DashStrength = 1000.0f;
 	FVector DashVelocity = GetActorForwardVector() * DashStrength;
-	DashVelocity.Z = 200.0f;
+	DashVelocity.Z = 100.0f;
 
 	LaunchCharacter(DashVelocity, true, true);
 
