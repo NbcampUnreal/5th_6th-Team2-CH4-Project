@@ -4,7 +4,6 @@
 #include "Character/KillerCharacter/T2KillerCharacter.h"
 
 #include "EnhancedInputComponent.h"
-#include "MeshPaintVisualize.h"
 #include "Camera/CameraComponent.h"
 #include "Gimmick/KillerLandTrap.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -14,7 +13,6 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
-#include "Component/T2FogComponent.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
@@ -41,15 +39,6 @@ AT2KillerCharacter::AT2KillerCharacter()
 	WeaponMesh->SetupAttachment(GetMesh(), TEXT("AxeSocket"));
 
 	CooldownComponent = CreateDefaultSubobject<UT2CooldownComponent>(TEXT("CooldownComponent"));
-
-	LeftFootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("LeftFootFog"));
-	RightFootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("RightFootFog"));
-
-	LeftFootFog->SetupAttachment(GetMesh());
-	RightFootFog->SetupAttachment(GetMesh());
-
-	LeftFootFog->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
-	RightFootFog->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -75,12 +64,6 @@ void AT2KillerCharacter::BeginPlay()
 	if (GetCharacterMovement())
 	{
 		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-	}
-	
-	if (GetMesh())
-	{
-		LeftFootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_l"));
-		RightFootFog->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("foot_r"));
 	}
 }
 
