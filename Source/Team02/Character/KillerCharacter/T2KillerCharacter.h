@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/T2BaseCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
+
 #include "T2KillerCharacter.generated.h"
 
 class USoundBase;
@@ -12,6 +13,7 @@ class UCameraComponent;
 class UStaticMeshComponent;
 class UT2CooldownComponent;
 class UUW_KillerHUD;
+class UT2FogComponent;
 
 /**
  * 
@@ -49,11 +51,11 @@ protected:
 	class USpringArmComponent* CameraBoom; 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* ThirdPersonCamera; 
+	class UCameraComponent* ThirdPersonCamera;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UT2CooldownComponent> CooldownComponent;
-
+	
 #pragma endregion
 
 #pragma region Killer Input
@@ -155,4 +157,14 @@ protected:
 	float WalkVolumeMultiplier = 0.15f;
 
 #pragma endregion
+
+#pragma region Fog System
+	
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Effects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UT2FogComponent> LeftFootFog;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Effects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UT2FogComponent> RightFootFog;
+#pragma endregion 
 };
