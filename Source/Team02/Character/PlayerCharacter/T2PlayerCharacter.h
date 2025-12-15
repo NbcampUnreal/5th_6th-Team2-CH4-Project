@@ -21,9 +21,16 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void Tick(float DeltaTime) override;
+
 	void HandleCrouchInput(const FInputActionValue& InValue);
 
 	void HandleFlashlightInput(const FInputActionValue& InValue);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleCrouch();
+
+	void ToggleCrouch();
 	
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -54,7 +61,6 @@ public:
 	TObjectPtr<UInputAction> FlashlightInput;
 
 
-
 #pragma region TEST
 public:
 
@@ -63,7 +69,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> ViewModeInput;
 
-	bool bShowFullBody = false;
+	bool bIsFirstPerson = false;
 
 #pragma endregion
 

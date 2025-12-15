@@ -45,9 +45,8 @@ protected:
 
 #pragma region Survivor Input
 public:
-	bool bIsCrouching = false;
+	bool BTC = false;
 
-	bool GetIsCrouching() { return bIsCrouching; }
 
 #pragma endregion
 
