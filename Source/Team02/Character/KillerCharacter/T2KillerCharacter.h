@@ -26,6 +26,8 @@ class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 	AT2KillerCharacter();
 
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
@@ -120,6 +122,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="LandTrap")
 	TSubclassOf<AActor> LandTrapClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
+	TObjectPtr<USoundBase> LandTrapSound;
+
 #pragma endregion
 
 #pragma region Dash System
@@ -129,7 +134,17 @@ protected:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashImpulseStrength = 2000.0f;
+	float DashDuration = 0.25f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dash")
+	TObjectPtr<USoundBase> DashSound;
+	
+	FTimerHandle DashTimerHandle;
+	
+	float DefaultFOV = 90.0f;
+	float TargetFOV = 110.0f;
+	
+	bool bIsDashing = false;
 
 #pragma endregion
 

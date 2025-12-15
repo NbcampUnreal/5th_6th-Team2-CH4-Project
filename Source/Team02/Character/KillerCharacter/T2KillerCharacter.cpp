@@ -17,6 +17,8 @@
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
+	
+	
 	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
 	FPSCamera->SetupAttachment(GetMesh(), TEXT("head"));
 	FPSCamera->bUsePawnControlRotation = true;
@@ -72,7 +74,19 @@ void AT2KillerCharacter::BeginPlay()
 	{
 		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	}
+
+	if (FPSCamera) DefaultFOV = FPSCamera->FieldOfView;
+}
+
+void AT2KillerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
 	
+	float CurrentFOV = FPSCamera->FieldOfView;
+	float Target = bIsDashing ? TargetFOV : DefaultFOV;
+
+	float NewFOV = FMath::FInterpTo(CurrentFOV, Target, DeltaTime, 10.0f);
+	FPSCamera->SetFieldOfView(NewFOV);
 }
 
 void AT2KillerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -202,6 +216,8 @@ void AT2KillerCharacter::OnRep_IsAttacking()
 	}
 }
 
+
+
 void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
 {
 	if (!FootstepSound) return;
@@ -264,6 +280,11 @@ void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
 			}
 		}
 	}
+
+	if (LandTrapSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LandTrapSound, GetActorLocation());
+	}
 }
 
 bool AT2KillerCharacter::ServerRPCSpawnLandTrap_Validate()
@@ -283,20 +304,37 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 		}
 	}
 	
-	if (bIsAttacking) return;
+	if (bIsAttacking || bIsDashing) return;
 
-	float DashStrength = 1000.0f;
+	bIsDashing = true;
+	
+	if (DashSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DashSound, GetActorLocation());
+	}
+
+	GetCharacterMovement()->BrakingDecelerationWalking = 0.f;
+
+	float DashStrength = 2500.0f; 
 	FVector DashVelocity = GetActorForwardVector() * DashStrength;
-	DashVelocity.Z = 100.0f;
-
+    
 	LaunchCharacter(DashVelocity, true, true);
 
-	UKismetSystemLibrary::PrintString(this, TEXT("Dash!"), true, true, FLinearColor::Blue, 2.f);
+	GetWorld()->GetTimerManager().SetTimer(DashTimerHandle, [this]()
+	{
+		bIsDashing = false;
+		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
+	}, DashDuration, false);
 
+	if (FootstepSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FootstepSound, GetActorLocation());
+	}
 	if (IsValid(CooldownComponent))
 	{
 		CooldownComponent->StartDashCooldown();
 	}
+	
 }
 
 bool AT2KillerCharacter::ServerRPCDash_Validate()
