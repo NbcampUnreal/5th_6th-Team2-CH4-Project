@@ -8,6 +8,7 @@
 class UFlashlightComponent;
 class USpringArmComponent;
 class UCamera;
+class USpotLightComponent;
 
 UCLASS()
 class TEAM02_API AT2PlayerCharacter : public AT2BaseCharacter
@@ -23,7 +24,7 @@ public:
 
 	void HandleCrouchInput(const FInputActionValue& InValue);
 
-	void HandleFlashlightInput(const FInputActionValue& InValue);
+	void HandleFlashlightInput();
 
 	UFUNCTION(Server, Reliable)
 	void Server_ToggleCrouch();
@@ -51,14 +52,14 @@ public:
 	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly)
 	TObjectPtr<UFlashlightComponent> FlashlightComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	TObjectPtr<USpotLightComponent> Flashlight;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> PlayerInputMappingContext;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> CrouchInput;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> FlashlightInput;
 
 
 #pragma region TEST

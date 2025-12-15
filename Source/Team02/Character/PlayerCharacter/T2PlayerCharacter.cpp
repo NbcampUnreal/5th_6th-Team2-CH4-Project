@@ -8,10 +8,13 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
+#include "Components/SpotLightComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
 {
+	bReplicates = true;
 	GetCharacterMovement()->PrimaryComponentTick.bCanEverTick = true;
 	GetCharacterMovement()->PrimaryComponentTick.bStartWithTickEnabled = true;
 
@@ -49,6 +52,10 @@ AT2PlayerCharacter::AT2PlayerCharacter()
 
 	bUseControllerRotationYaw = false;
 
+	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("SpotLightComponent"));
+	Flashlight->SetupAttachment(FirstPersonCamera);
+	Flashlight->SetVisibility(false);
+
 }
 
 void AT2PlayerCharacter::BeginPlay()
@@ -83,14 +90,20 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	PlayerInputComponent->BindKey(
+		FKey(EKeys::F),
+		IE_Pressed,
+		this,
+		&ThisClass::HandleFlashlightInput
+	);
+
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EIC->BindAction(CrouchInput, ETriggerEvent::Started, this, &ThisClass::HandleCrouchInput);
-		EIC->BindAction(FlashlightInput, ETriggerEvent::Started, this, &ThisClass::HandleFlashlightInput);
 		EIC->BindAction(ViewModeInput, ETriggerEvent::Started, this, &ThisClass::HandleViewModeInput);
 	}
-}
 
+}
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 {
@@ -112,11 +125,11 @@ void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 	Server_ToggleCrouch();
 }
 
-void AT2PlayerCharacter::HandleFlashlightInput(const FInputActionValue& InValue)
+void AT2PlayerCharacter::HandleFlashlightInput()
 {
 	if (FlashlightComp)
 	{
-		FlashlightComp->ToggleFlashlight();
+		FlashlightComp->Server_ToggleFlashlight();
 	}
 	else
 	{
@@ -170,6 +183,7 @@ void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
 		Crouch();
 	}
 }
+
 
 void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 {
