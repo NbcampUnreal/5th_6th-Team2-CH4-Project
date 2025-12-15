@@ -18,7 +18,12 @@ class TEAM02_API UT2GameInstance : public UGameInstance
     GENERATED_BODY()
 
 public:
-
     UPROPERTY(BlueprintReadWrite, Category = "Game")
     EPlayerRole SelectedRole = EPlayerRole::None;
+
+    UFUNCTION(BlueprintCallable, Category = "Network")
+    void HostGame(const FString& MapName);
+
+    UFUNCTION(BlueprintCallable, Category = "Network")
+    void JoinGame(const FString& IPAddress);
 };
