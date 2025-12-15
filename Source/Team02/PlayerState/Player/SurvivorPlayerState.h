@@ -7,7 +7,6 @@
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float)
 
 
-
 UCLASS()
 class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
 {
