@@ -91,43 +91,6 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	}
 }
 
-void AT2PlayerCharacter::Tick(float DeltaTime)
-{
-	//Ä¸½¶ÄÄÆ÷³ÍÆ® µð¹ö±ë¿ë
-	/*UCapsuleComponent* Cap = GetCapsuleComponent();
-	UCharacterMovementComponent* Move = GetCharacterMovement();
-
-	const float StandHH = Cap->GetUnscaledCapsuleHalfHeight();
-	const float CrouchHH = Move->CrouchedHalfHeight;
-	const float Radius = Cap->GetUnscaledCapsuleRadius();
-
-	const FVector BaseLoc = Cap->GetComponentLocation();*/
-
-	//// ÇöÀç Ä¸½¶ (»¡°­)
-	//DrawDebugCapsule(
-	//	GetWorld(),
-	//	BaseLoc,
-	//	StandHH,
-	//	Radius,
-	//	Cap->GetComponentQuat(),
-	//	FColor::Red,
-	//	false, 0.f, 0, 2.f
-	//);
-
-	//// ¹Ù´Ú ±âÁØÀ¸·Î º¸Á¤µÈ crouch Ä¸½¶ (ÃÊ·Ï)
-	//const float HalfHeightAdjust = StandHH - CrouchHH;
-	//const FVector CrouchCenter = BaseLoc - FVector(0, 0, HalfHeightAdjust);
-
-	//DrawDebugCapsule(
-	//	GetWorld(),
-	//	CrouchCenter,
-	//	CrouchHH,
-	//	Radius,
-	//	Cap->GetComponentQuat(),
-	//	FColor::Green,
-	//	false, 0.f, 0, 2.f
-	//);
-}
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 {

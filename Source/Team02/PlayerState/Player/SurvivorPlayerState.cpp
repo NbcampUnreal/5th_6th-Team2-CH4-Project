@@ -1,4 +1,6 @@
 #include "PlayerState/Player/SurvivorPlayerState.h"
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -8,6 +10,13 @@ void ASurvivorPlayerState::BeginPlay()
 	{
 		CurrentHP = MaxHP;
 	}
+}
+
+void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASurvivorPlayerState, CurrentHP);
 }
 
 void ASurvivorPlayerState::OnRep_HP()

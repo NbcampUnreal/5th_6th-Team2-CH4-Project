@@ -6,6 +6,8 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float)
 
+
+
 UCLASS()
 class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
 {
@@ -21,6 +23,8 @@ public:
 	float CurrentHP;
 
 	FOnHPChanged OnHPChanged;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
 	void OnRep_HP();

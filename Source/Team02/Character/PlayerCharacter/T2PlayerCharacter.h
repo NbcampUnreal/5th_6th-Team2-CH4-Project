@@ -21,8 +21,6 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	void Tick(float DeltaTime) override;
-
 	void HandleCrouchInput(const FInputActionValue& InValue);
 
 	void HandleFlashlightInput(const FInputActionValue& InValue);
@@ -32,11 +30,7 @@ public:
 
 	void HandleHPChanged(float CurrentHP, float MaxHP);
 
-	float TakeDamage(
-		float DamageAmount,
-		FDamageEvent const& DamageEvent, 
-		AController* EventInstigator, 
-		AActor* DamageCauser) override;
+	float TakeDamage(float DamageAmount,FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
