@@ -182,7 +182,7 @@ void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
 		TEXT("Wants=%d , IsCrouched=%d , CanCrouch=%d , Falling=%d"),
 		GetCharacterMovement()->bWantsToCrouch,
 		bIsCrouched,
-		GetCharacterMovement()->CanCrouchInCurrentState(),
+		CanCrouch(),
 		GetCharacterMovement()->IsFalling()
 	);
 }
