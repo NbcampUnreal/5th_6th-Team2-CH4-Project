@@ -36,6 +36,9 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 	const float PreviousHP = CurrentHP;
 
 	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
+	
+	//DEBUGGING LOG
+	UE_LOG(LogTemp, Warning, TEXT("%s : %f"), *GetOwner()->GetName(), CurrentHP);
 
 	if (CurrentHP != PreviousHP)
 	{
