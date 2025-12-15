@@ -2,7 +2,6 @@
 
 
 #include "Animation/T2AnimInstanceBase.h"
-
 #include "Character/T2BaseCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -33,5 +32,6 @@ void UT2AnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	
 	bIsFalling = OwnerCharacterMovementComponent->IsFalling();
 
-	bIsCroucing = OwnerCharacter->GetIsCrouching();
+	bIsCrouching = OwnerCharacter->bIsCrouched;
+
 }

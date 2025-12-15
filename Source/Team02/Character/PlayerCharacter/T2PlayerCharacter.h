@@ -6,6 +6,8 @@
 
 
 class UFlashlightComponent;
+class USpringArmComponent;
+class UCamera;
 
 UCLASS()
 class TEAM02_API AT2PlayerCharacter : public AT2BaseCharacter
@@ -22,8 +24,27 @@ public:
 	void HandleCrouchInput(const FInputActionValue& InValue);
 
 	void HandleFlashlightInput(const FInputActionValue& InValue);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleCrouch();
+
+	void HandleHPChanged(float CurrentHP, float MaxHP);
+
+	float TakeDamage(float DamageAmount,FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	
 public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<USpringArmComponent> SpringArmComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UCameraComponent> ThirdPersonCamera;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UCameraComponent> FirstPersonCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<USkeletalMeshComponent> FirstPersonArms;
+
 	UPROPERTY(VisibleAnyWhere, BlueprintReadOnly)
 	TObjectPtr<USkeletalMeshComponent> FlashlightMesh;
 
@@ -38,5 +59,18 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> FlashlightInput;
+
+
+#pragma region TEST
+public:
+
+	void HandleViewModeInput(const FInputActionValue& InValue);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ViewModeInput;
+
+	bool bIsFirstPerson = false;
+
+#pragma endregion
 
 };

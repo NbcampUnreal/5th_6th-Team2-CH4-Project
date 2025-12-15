@@ -42,13 +42,4 @@ protected:
 	
 	void HandleLookInput(const FInputActionValue& InValue);
 
-
-#pragma region Survivor Input
-public:
-	bool bIsCrouching = false;
-
-	bool GetIsCrouching() { return bIsCrouching; }
-
-#pragma endregion
-
 };
