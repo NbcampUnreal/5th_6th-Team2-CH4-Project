@@ -44,7 +44,4 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	uint8 bIsCrouching : 1;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
-	uint8 bWantsToCrouch : 1;
 };

@@ -33,6 +33,5 @@ void UT2AnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	bIsFalling = OwnerCharacterMovementComponent->IsFalling();
 
 	bIsCrouching = OwnerCharacter->bIsCrouched;
-	bWantsToCrouch = OwnerCharacter->BTC;
 
 }

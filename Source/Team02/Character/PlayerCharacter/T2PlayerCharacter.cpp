@@ -7,9 +7,14 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
+
 
 AT2PlayerCharacter::AT2PlayerCharacter()
 {
+	GetCharacterMovement()->PrimaryComponentTick.bCanEverTick = true;
+	GetCharacterMovement()->PrimaryComponentTick.bStartWithTickEnabled = true;
+
 	FlashlightMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FlashlightMesh"));
 	FlashlightMesh->SetupAttachment(GetMesh());
 
@@ -67,6 +72,11 @@ void AT2PlayerCharacter::BeginPlay()
 		FName("hand_rSocket")
 	);
 
+	if (ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>())
+	{
+		PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
+	}
+
 }
 
 void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -83,39 +93,40 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 void AT2PlayerCharacter::Tick(float DeltaTime)
 {
-	UCapsuleComponent* Cap = GetCapsuleComponent();
+	//Ä¸½¶ÄÄÆ÷³ÍÆ® µð¹ö±ë¿ë
+	/*UCapsuleComponent* Cap = GetCapsuleComponent();
 	UCharacterMovementComponent* Move = GetCharacterMovement();
 
 	const float StandHH = Cap->GetUnscaledCapsuleHalfHeight();
 	const float CrouchHH = Move->CrouchedHalfHeight;
 	const float Radius = Cap->GetUnscaledCapsuleRadius();
 
-	const FVector BaseLoc = Cap->GetComponentLocation();
+	const FVector BaseLoc = Cap->GetComponentLocation();*/
 
-	// ÇöÀç Ä¸½¶ (»¡°­)
-	DrawDebugCapsule(
-		GetWorld(),
-		BaseLoc,
-		StandHH,
-		Radius,
-		Cap->GetComponentQuat(),
-		FColor::Red,
-		false, 0.f, 0, 2.f
-	);
+	//// ÇöÀç Ä¸½¶ (»¡°­)
+	//DrawDebugCapsule(
+	//	GetWorld(),
+	//	BaseLoc,
+	//	StandHH,
+	//	Radius,
+	//	Cap->GetComponentQuat(),
+	//	FColor::Red,
+	//	false, 0.f, 0, 2.f
+	//);
 
-	// ¹Ù´Ú ±âÁØÀ¸·Î º¸Á¤µÈ crouch Ä¸½¶ (ÃÊ·Ï)
-	const float HalfHeightAdjust = StandHH - CrouchHH;
-	const FVector CrouchCenter = BaseLoc - FVector(0, 0, HalfHeightAdjust);
+	//// ¹Ù´Ú ±âÁØÀ¸·Î º¸Á¤µÈ crouch Ä¸½¶ (ÃÊ·Ï)
+	//const float HalfHeightAdjust = StandHH - CrouchHH;
+	//const FVector CrouchCenter = BaseLoc - FVector(0, 0, HalfHeightAdjust);
 
-	DrawDebugCapsule(
-		GetWorld(),
-		CrouchCenter,
-		CrouchHH,
-		Radius,
-		Cap->GetComponentQuat(),
-		FColor::Green,
-		false, 0.f, 0, 2.f
-	);
+	//DrawDebugCapsule(
+	//	GetWorld(),
+	//	CrouchCenter,
+	//	CrouchHH,
+	//	Radius,
+	//	Cap->GetComponentQuat(),
+	//	FColor::Green,
+	//	false, 0.f, 0, 2.f
+	//);
 }
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
@@ -124,8 +135,17 @@ void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 	{
 		return;
 	}
-
-	BTC = !BTC;
+	
+	bool bTargetrState = !bIsCrouched;
+	if (bTargetrState)
+	{
+		Crouch();
+	}
+	else
+	{
+		UnCrouch();
+	}
+	
 	Server_ToggleCrouch();
 }
 
@@ -141,34 +161,43 @@ void AT2PlayerCharacter::HandleFlashlightInput(const FInputActionValue& InValue)
 	}
 }
 
-void AT2PlayerCharacter::ToggleCrouch()
+void AT2PlayerCharacter::HandleHPChanged(float CurrentHP, float MaxHP)
 {
-	if (GetCharacterMovement()->IsCrouching())
+	if (CurrentHP <= 0.f)
 	{
-		UnCrouch();
-
-		UE_LOG(LogTemp, Error, TEXT("UnCrouch"));
-		UE_LOG(LogTemp, Error, TEXT("%d"), GetCharacterMovement()->IsCrouching());
+		//PlayDeathMontage();
 	}
 	else
 	{
-		Crouch();
-		UE_LOG(LogTemp, Error, TEXT("Crouch"));
-		UE_LOG(LogTemp, Error, TEXT("%d"), GetCharacterMovement()->IsCrouching());
+		//PlayHitReactMontage();
+	}
+}
+
+float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	if (!HasAuthority())
+	{
+		return 0.f;
 	}
 
+	ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
+	if (IsValid(PS) == true)
+	{
+		PS->ApplyDamage(DamageAmount);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PlayerState invalid in TakeDamage"));
+		return 0.f;
+	}
+
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	return DamageAmount;
 }
 
 void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
 {
-	//ToggleCrouch();
-
-	//UE_LOG(LogTemp, Error,
-	//	TEXT("SERVER RPC Role=%d CanCrouch=%d Falling=%d"),
-	//	(int32)GetLocalRole(),
-	//	GetCharacterMovement()->CanCrouchInCurrentState(),
-	//	GetCharacterMovement()->IsFalling());
-
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -177,14 +206,6 @@ void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
 	{
 		Crouch();
 	}
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("Wants=%d , IsCrouched=%d , CanCrouch=%d , Falling=%d"),
-		GetCharacterMovement()->bWantsToCrouch,
-		bIsCrouched,
-		CanCrouch(),
-		GetCharacterMovement()->IsFalling()
-	);
 }
 
 void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)

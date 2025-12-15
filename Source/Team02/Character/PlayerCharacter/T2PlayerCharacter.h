@@ -30,7 +30,13 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ToggleCrouch();
 
-	void ToggleCrouch();
+	void HandleHPChanged(float CurrentHP, float MaxHP);
+
+	float TakeDamage(
+		float DamageAmount,
+		FDamageEvent const& DamageEvent, 
+		AController* EventInstigator, 
+		AActor* DamageCauser) override;
 	
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

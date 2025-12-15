@@ -42,12 +42,4 @@ protected:
 	
 	void HandleLookInput(const FInputActionValue& InValue);
 
-
-#pragma region Survivor Input
-public:
-	bool BTC = false;
-
-
-#pragma endregion
-
 };
