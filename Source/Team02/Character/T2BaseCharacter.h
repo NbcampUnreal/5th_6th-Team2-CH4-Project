@@ -69,4 +69,7 @@ protected:
 public:
 	UPROPERTY()
 	bool bDeathMontageEndedHandled = false;
+
+
+#pragma region TEST ATTACK
 };

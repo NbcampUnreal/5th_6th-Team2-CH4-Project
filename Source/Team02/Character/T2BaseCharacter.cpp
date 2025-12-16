@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 
 
 AT2BaseCharacter::AT2BaseCharacter()
