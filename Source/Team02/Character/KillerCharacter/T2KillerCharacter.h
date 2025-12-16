@@ -97,10 +97,21 @@ public:
 	UFUNCTION(BlueprintCallable) 
 	void AttackEnd();
 
+	UFUNCTION(BlueprintCallable)
+	void OnHitSuccessful(APawn* VictimPawn, const FVector& ImpactPoint);
+	
+	void PlayAttackHitSound(const FVector& Location);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Attack")
 	UAnimMontage* AttackMontage;
 
+	UPROPERTY(EditDefaultsOnly, Category="Attack")
+	TObjectPtr<USoundBase> AttackSwingSound;
+
+	UPROPERTY(EditDefaultsOnly, Category="Attack") 
+	TObjectPtr<USoundBase> AttackHitSound;
+	
 	UPROPERTY(ReplicatedUsing = OnRep_IsAttacking)
 	bool bIsAttacking = false;
 
@@ -111,6 +122,7 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
+
 #pragma endregion
 	
 #pragma region LandTrap System

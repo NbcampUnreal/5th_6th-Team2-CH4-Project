@@ -13,6 +13,7 @@
 #include "Component/T2FogComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 #include "Sound/SoundBase.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
@@ -205,6 +206,24 @@ void AT2KillerCharacter::AttackEnd()
 	}
 }
 
+void AT2KillerCharacter::OnHitSuccessful(APawn* VictimPawn, const FVector& ImpactPoint)
+{
+	if (!VictimPawn)
+	{
+		return;
+	}
+
+	PlayAttackHitSound(ImpactPoint);	
+}
+
+void AT2KillerCharacter::PlayAttackHitSound(const FVector& Location)
+{
+	if (AttackHitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackHitSound, Location);
+	}
+}
+
 void AT2KillerCharacter::OnRep_IsAttacking()
 {
 	if (bIsAttacking && AttackMontage)
@@ -348,6 +367,11 @@ void AT2KillerCharacter::ServerAttack_Implementation()
 
 	bIsAttacking = true;
 	float Duration = PlayAnimMontage(AttackMontage);
+
+	if (AttackSwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackSwingSound, GetActorLocation()); 
+	}
 	
 	if (Duration > 0.0f)
 	{
