@@ -11,6 +11,7 @@
 UT2CooldownComponent::UT2CooldownComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 }
 
 void UT2CooldownComponent::StartLandTrapCooldown()
@@ -62,7 +63,9 @@ float UT2CooldownComponent::GetLandTrapCooldownProgress() const
 	{
 		float CurrentTime = World->GetTimeSeconds();
 		float ElapsedTime = CurrentTime - LandTrapCooldownStartTime;
-		float Progress = ElapsedTime / LandTrapCooldownDuration;
+        
+		float Progress = ElapsedTime / LandTrapCooldownDuration; 
+
 		return FMath::Clamp(Progress, 0.0f, 1.0f);
 	}
     
@@ -80,7 +83,9 @@ float UT2CooldownComponent::GetDashCooldownProgress() const
 	{
 		float CurrentTime = World->GetTimeSeconds();
 		float ElapsedTime = CurrentTime - DashCooldownStartTime;
+        
 		float Progress = ElapsedTime / DashCooldownDuration;
+
 		return FMath::Clamp(Progress, 0.0f, 1.0f);
 	}
     
@@ -109,14 +114,23 @@ void UT2CooldownComponent::ClearDashCooldown()
 	}
 }
 
+void UT2CooldownComponent::OnRep_LandTrapCooldownStartTime()
+{
+}
+
+void UT2CooldownComponent::OnRep_DashCooldownStartTime()
+{
+}
+
 void UT2CooldownComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UT2CooldownComponent, bIsLandTrapOnCooldown);
-	DOREPLIFETIME(UT2CooldownComponent, LandTrapCooldownStartTime);
+	DOREPLIFETIME_CONDITION(UT2CooldownComponent, bIsLandTrapOnCooldown, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UT2CooldownComponent, LandTrapCooldownStartTime, COND_OwnerOnly);
 	
-	DOREPLIFETIME(UT2CooldownComponent, bIsDashOnCooldown);
-	DOREPLIFETIME(UT2CooldownComponent, DashCooldownStartTime);
+	DOREPLIFETIME_CONDITION(UT2CooldownComponent, bIsDashOnCooldown, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UT2CooldownComponent, DashCooldownStartTime, COND_OwnerOnly);
+
 }
 

@@ -1,6 +1,7 @@
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/FastReferenceCollector.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -21,6 +22,11 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void ASurvivorPlayerState::OnRep_HP()
 {
+	if (!IsValid(this))
+	{
+		return;
+	}
+	
 	OnHPChanged.Broadcast(CurrentHP, MaxHP);
 
 	UE_LOG(LogTemp, Warning, TEXT("OnHPChanged.Broadcast(CurrentHP, MaxHP);"));
@@ -30,6 +36,7 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 {
 	if (!HasAuthority())
 	{
+		UE_LOG(LogTemp, Error, TEXT("Client attempting to ApplyDamage! (DENIED)")); 
 		return;
 	}
 
@@ -38,7 +45,7 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
 	
 	//DEBUGGING LOG
-	UE_LOG(LogTemp, Warning, TEXT("%s : %f"), *GetOwner()->GetName(), CurrentHP);
+	UE_LOG(LogTemp, Warning, TEXT("DAMAGE APPLIED (Server): %s new HP: %f"), *GetOwner()->GetName(), CurrentHP);
 
 	if (CurrentHP != PreviousHP)
 	{

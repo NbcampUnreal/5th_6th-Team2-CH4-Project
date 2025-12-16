@@ -61,5 +61,12 @@ protected:
 	bool bIsDashOnCooldown = false;
 	
 	FTimerHandle DashCooldownTimerHandle;
+
+private:
+	UFUNCTION()
+	void OnRep_LandTrapCooldownStartTime(); 
+    
+	UFUNCTION()
+	void OnRep_DashCooldownStartTime();
     
 };

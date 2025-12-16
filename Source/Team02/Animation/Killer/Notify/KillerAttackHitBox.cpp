@@ -40,8 +40,8 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 	FVector StartLocation = PreviousWeaponLocation;
 	FVector EndLocation = CurrentWeaponLocation;
 	
-	const float CapsuleRadius = 25.f;
-	const float CapsuleHalfHeight = 75.f;
+	const float CapsuleRadius = 40.0f; 
+	const float CapsuleHalfHeight = 150.0f;
 	FCollisionShape TraceShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
 	
 	TArray<FHitResult> HitResults;
@@ -70,19 +70,48 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 			APawn* HitPawn = Cast<APawn>(HitResult.GetActor());
 			if (HitPawn)
 			{
-				ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(HitPawn->GetPlayerState());
-				if (SurvivorPS)
+				UE_LOG(LogTemp, Warning, TEXT("SERVER: Sweep Hit Pawn: %s"), *HitPawn->GetName());
+    
+				if (HitPawn == KillerCharacter) continue;
+
+				APlayerState* GenericPS = HitPawn->GetPlayerState();
+    
+				if (GenericPS)
 				{
-					SurvivorPS->ApplyDamage(40.f);
-
-					KillerCharacter->OnHitSuccessful(HitPawn, HitResult.ImpactPoint);
-
-					HitActors.AddUnique(HitResult.GetActor());
-					
-					//break;
+					UE_LOG(LogTemp, Warning, TEXT("SERVER: Hit Pawn PlayerState Found. Class Name: %s"), *GenericPS->GetClass()->GetName());
 				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s has NO PlayerState."), *HitPawn->GetName());
+				}
+
+				ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(HitPawn->GetPlayerState());
+    
+				if (!SurvivorPS)
+				{
+					if (Cast<AT2KillerCharacter>(HitPawn))
+					{
+						UE_LOG(LogTemp, Warning, TEXT("SERVER: Hit Pawn is the Killer Character itself. Ignoring."));
+						continue; 
+					}
+        
+					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s does NOT have a valid SurvivorPlayerState."), *HitPawn->GetName());
+					continue;
+				}
+    
+				UE_LOG(LogTemp, Warning, TEXT("SERVER HIT SUCCESS: Target %s, Applying Damage."), *HitPawn->GetName());
+    
+				SurvivorPS->ApplyDamage(40.f);
+
+				KillerCharacter->OnHitSuccessful(HitPawn, HitResult.ImpactPoint);
+
+				HitActors.AddUnique(HitResult.GetActor());
+
+				
 			}
 		}
+
+		
 	}
 
 	PreviousWeaponLocation = CurrentWeaponLocation;
