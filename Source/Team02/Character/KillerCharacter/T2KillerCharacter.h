@@ -54,7 +54,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* ThirdPersonCamera; 
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", Replicated) 
 	TObjectPtr<UT2CooldownComponent> CooldownComponent;
 
 #pragma endregion
@@ -102,6 +102,9 @@ public:
 	
 	void PlayAttackHitSound(const FVector& Location);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayHitSound(FVector ImpactLocation);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Attack")
 	UAnimMontage* AttackMontage;
@@ -130,6 +133,12 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCSpawnLandTrap();
 
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnLandTrapSuccess();
+    
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnLandTrapDenied();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="LandTrap")
 	TSubclassOf<AActor> LandTrapClass;
@@ -143,6 +152,12 @@ protected:
 protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCDash();
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnDashSuccess();
+    
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnDashDenied();
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
@@ -166,8 +181,16 @@ public:
 	void PlayFootstepSound(bool bIsLeftFoot);
 	
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", ReplicatedUsing=OnRep_IsWalking)
 	bool bIsWalking = false;
+
+	UFUNCTION()
+	void OnRep_IsWalking();
+
+	UFUNCTION(Server, Reliable)
+	void ServerToggleWalk(bool bNewIsWalking);
+
+	void UpdateMovementSpeed();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float WalkSpeedMultiplier = 0.20f; 
