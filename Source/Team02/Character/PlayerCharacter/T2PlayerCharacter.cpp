@@ -10,6 +10,7 @@
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "GameMode/T2GameModeBase.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -141,11 +142,11 @@ void AT2PlayerCharacter::HandleHPChanged(float CurrentHP, float MaxHP)
 {
 	if (CurrentHP <= 0.f)
 	{
-		//PlayDeathMontage();
+		OnDeath();
 	}
 	else
 	{
-		//PlayHitReactMontage();
+		Multicast_PlayHitMontage();
 	}
 }
 
@@ -170,6 +171,20 @@ float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dam
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	return DamageAmount;
+}
+
+void AT2PlayerCharacter::OnDeath()
+{
+	if (HasAuthority())
+	{
+		Multicast_PlayDeathMontage();
+
+		AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>();
+		if (IsValid(GM) == true)
+		{
+			GM->OnPlayerDead(this);
+		}
+	}
 }
 
 void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()

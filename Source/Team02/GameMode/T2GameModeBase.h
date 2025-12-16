@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "T2GameInstance.h"
+#include "Controller/Player/T2PlayerController.h"
+#include "Character/PlayerCharacter/T2PlayerCharacter.h"
 #include "T2GameModeBase.generated.h"
 
 UCLASS()
@@ -23,6 +25,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Game")
     void StartGameAsSurvivor();
+
+    void OnPlayerDead(AT2PlayerCharacter* DeadCharacter);
 
 protected:
     virtual void BeginPlay() override;

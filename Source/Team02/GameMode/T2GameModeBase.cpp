@@ -54,6 +54,26 @@ void AT2GameModeBase::StartGameAsSurvivor()
     StartGameWithRole(EPlayerRole::Survivor);
 }
 
+void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
+{
+    AT2PlayerController* PC = Cast<AT2PlayerController>(DeadCharacter->GetController());
+    if (IsValid(PC) == false)
+    {
+        return;
+    }
+
+    ////관전자 상태로 전환
+    //PC->StartSpectate(Target);
+
+    ////관전 대상 선택
+    //ACharacter* AliverPlayer = FindAlivePlayerExcept(DeadCharacter);
+
+    //if (AlivePlayer)
+    //{
+    //    PC->SetViewTargetWithBlend(AlivePlayer, 0.5f);
+    //}
+}
+
 void AT2GameModeBase::StartGameWithRole(EPlayerRole InRole)
 {
 

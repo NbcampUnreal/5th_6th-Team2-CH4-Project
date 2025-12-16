@@ -32,7 +32,9 @@ public:
 	void HandleHPChanged(float CurrentHP, float MaxHP);
 
 	float TakeDamage(float DamageAmount,FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-	
+
+	void OnDeath();
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USpringArmComponent> SpringArmComponent;

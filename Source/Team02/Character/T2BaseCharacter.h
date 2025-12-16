@@ -42,4 +42,31 @@ protected:
 	
 	void HandleLookInput(const FInputActionValue& InValue);
 
+#pragma region PlayMontage
+	
+public:
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayHitMontage();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayDeathMontage();
+
+	UFUNCTION()
+	void AnimNotify_DeathEnd();
+
+	UFUNCTION(Server, Reliable)
+	void Server_NotifyDeathMontageEnded();
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> HitMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> DeathMontage;
+
+#pragma endregion
+
+
+public:
+	UPROPERTY()
+	bool bDeathMontageEndedHandled = false;
 };
