@@ -4,7 +4,7 @@
 #include "PlayerState/T2PlayerState.h"
 #include "SurvivorPlayerState.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float);
 
 
 UCLASS()

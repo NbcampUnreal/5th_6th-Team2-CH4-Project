@@ -22,6 +22,8 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual void OnRep_PlayerState() override;
+
 	void HandleCrouchInput(const FInputActionValue& InValue);
 
 	void HandleFlashlightInput();

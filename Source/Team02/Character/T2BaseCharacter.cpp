@@ -83,6 +83,8 @@ void AT2BaseCharacter::HandleLookInput(const FInputActionValue& InValue)
 
 void AT2BaseCharacter::AnimNotify_DeathEnd()
 {
+	UE_LOG(LogTemp, Warning, TEXT("AnimNotify_DeathEnd | Authority=%d"), HasAuthority());
+
 	if (!HasAuthority())
 	{
 		Server_NotifyDeathMontageEnded();

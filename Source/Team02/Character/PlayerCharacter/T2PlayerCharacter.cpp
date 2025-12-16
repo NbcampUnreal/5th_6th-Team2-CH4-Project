@@ -79,12 +79,6 @@ void AT2PlayerCharacter::BeginPlay()
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		FName("hand_rSocket")
 	);
-
-	if (ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>())
-	{
-		PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
-	}
-
 }
 
 void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -104,6 +98,18 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		EIC->BindAction(ViewModeInput, ETriggerEvent::Started, this, &ThisClass::HandleViewModeInput);
 	}
 
+}
+
+void AT2PlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
+	if (PS)
+	{
+		PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
+		UE_LOG(LogTemp, Warning, TEXT("PlayerState arrived, delegate bound"));
+	}
 }
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
@@ -140,11 +146,7 @@ void AT2PlayerCharacter::HandleFlashlightInput()
 
 void AT2PlayerCharacter::HandleHPChanged(float CurrentHP, float MaxHP)
 {
-	if (CurrentHP <= 0.f)
-	{
-		OnDeath();
-	}
-	else
+	if (CurrentHP > 0)
 	{
 		Multicast_PlayHitMontage();
 	}

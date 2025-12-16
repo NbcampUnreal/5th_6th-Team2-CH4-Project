@@ -2,6 +2,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/FastReferenceCollector.h"
+#include "Character/PlayerCharacter/T2PlayerCharacter.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -22,10 +23,10 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void ASurvivorPlayerState::OnRep_HP()
 {
-	if (!IsValid(this))
-	{
-		return;
-	}
+	//if (!IsValid(this))
+	//{
+	//	return;
+	//}
 	
 	OnHPChanged.Broadcast(CurrentHP, MaxHP);
 
@@ -41,6 +42,14 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 	}
 
 	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
+
+	if (CurrentHP <= 0)
+	{
+		if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
+		{
+			Player->OnDeath();
+		}
+	}
 	
 	//DEBUGGING LOG
 	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
