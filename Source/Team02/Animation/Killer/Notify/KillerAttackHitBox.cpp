@@ -36,15 +36,13 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		return;
 	}
 	
-	// 킬러 앞쪽으로 박스 트레이스
 	FVector KillerLocation = KillerCharacter->GetActorLocation();
 	FVector ForwardVector = KillerCharacter->GetActorForwardVector();
 	
-	// 박스 설정 (폭, 높이, 깊이)
-	FVector BoxHalfSize(80.0f, 70.0f, 50.0f); // X=앞뒤, Y=좌우, Z=상하
-	float TraceDistance = 100.0f; // 앞으로 얼마나 멀리 체크할지
+	FVector BoxHalfSize(80.0f, 70.0f, 50.0f); 
+	float TraceDistance = 100.0f; 
 	
-	FVector StartLocation = KillerLocation + FVector(0, 0, 50.0f); // 약간 위에서 시작
+	FVector StartLocation = KillerLocation + FVector(0, 0, 50.0f); 
 	FVector EndLocation = StartLocation + (ForwardVector * TraceDistance);
 	
 	TArray<FHitResult> HitResults;
@@ -56,7 +54,6 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		Params.AddIgnoredActor(HitActor);
 	}
 	
-	// 박스 트레이스 실행
 	FQuat BoxRotation = KillerCharacter->GetActorRotation().Quaternion();
 	
 	bool bHit = MeshComp->GetWorld()->SweepMultiByChannel(
@@ -76,7 +73,6 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 			APawn* HitPawn = Cast<APawn>(HitResult.GetActor());
 			if (HitPawn && HitPawn != KillerCharacter)
 			{
-				// 이미 맞은 액터 스킵
 				if (HitActors.Contains(HitPawn))
 				{
 					continue;
@@ -106,7 +102,6 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		}
 	}
 
-	// 디버그 박스 그리기
 	FVector BoxCenter = (StartLocation + EndLocation) / 2.0f;
 	DrawDebugBox(
 		MeshComp->GetWorld(),
