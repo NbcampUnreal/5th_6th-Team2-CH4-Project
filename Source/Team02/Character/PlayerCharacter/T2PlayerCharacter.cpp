@@ -104,12 +104,12 @@ void AT2PlayerCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
-	if (PS)
-	{
-		PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
-		UE_LOG(LogTemp, Warning, TEXT("PlayerState arrived, delegate bound"));
-	}
+	//ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
+	//if (PS)
+	//{
+	//	PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
+	//	UE_LOG(LogTemp, Warning, TEXT("PlayerState arrived, delegate bound"));
+	//}
 }
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
@@ -146,10 +146,10 @@ void AT2PlayerCharacter::HandleFlashlightInput()
 
 void AT2PlayerCharacter::HandleHPChanged(float CurrentHP, float MaxHP)
 {
-	if (CurrentHP > 0)
+	/*if (CurrentHP > 0)
 	{
 		Multicast_PlayHitMontage();
-	}
+	}*/
 }
 
 float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -251,4 +251,12 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 		// 스프링암이 컨트롤러 회전을 따라가게
 		SpringArmComponent->bUsePawnControlRotation = true;
 	}
+}
+
+void AT2PlayerCharacter::OnDeathMontageEneded()
+{
+	if (!HasAuthority()) return;
+
+	DetachFromControllerPendingDestroy();
+	Destroy();
 }

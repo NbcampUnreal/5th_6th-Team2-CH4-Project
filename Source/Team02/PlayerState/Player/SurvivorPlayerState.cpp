@@ -23,10 +23,10 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void ASurvivorPlayerState::OnRep_HP()
 {
-	//if (!IsValid(this))
-	//{
-	//	return;
-	//}
+	if (!IsValid(this))
+	{
+		return;
+	}
 	
 	OnHPChanged.Broadcast(CurrentHP, MaxHP);
 
@@ -43,12 +43,20 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 
 	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
 
-	if (CurrentHP <= 0)
+	AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
+
+	if (IsValid(Player) == false)
 	{
-		if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
-		{
-			Player->OnDeath();
-		}
+		return;
+	}
+
+	if (CurrentHP > 0)
+	{
+		Player->Multicast_PlayHitMontage();
+	}
+	else
+	{
+		Player->OnDeath();
 	}
 	
 	//DEBUGGING LOG
