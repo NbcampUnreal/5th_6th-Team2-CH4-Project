@@ -1,5 +1,6 @@
 #include "Controller/Player/T2PlayerController.h"
 #include "UW_SurvivorHUD.h"
+#include "T2PlayGameMod.h" 
 
 void AT2PlayerController::BeginPlay()
 {
@@ -7,7 +8,10 @@ void AT2PlayerController::BeginPlay()
 
     if (IsLocalPlayerController())
     {
-        ShowSurvivorHUD();
+        if (GetWorld() && GetWorld()->GetAuthGameMode<AT2PlayGameMod>())
+        {
+            ShowSurvivorHUD();
+        }
     }
 }
 

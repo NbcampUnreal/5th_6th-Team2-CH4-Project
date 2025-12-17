@@ -5,7 +5,10 @@
 void UUW_SurvivorHUD::NativeConstruct()
 {
     Super::NativeConstruct();
-
+    if (HP)
+    {
+        HP->SetFillColorAndOpacity(FLinearColor(0.8f, 0.1f, 0.1f, 1.f));
+    }
 
     if (Item)
     {
