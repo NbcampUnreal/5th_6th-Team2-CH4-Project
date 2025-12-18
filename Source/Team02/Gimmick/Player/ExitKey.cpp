@@ -1,7 +1,7 @@
 #include "Gimmick/Player/ExitKey.h"
 #include "Components/CapsuleComponent.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
-#include "GameState/T2GameStateBase.h"
+#include "T2PlayGameState.h"
 #include "Character/KillerCharacter/T2KillerCharacter.h"
 
 // Sets default values
@@ -56,8 +56,8 @@ void AExitKey::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* 
 
 	if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(OtherActor))
 	{
-		AT2GameStateBase* GS = GetWorld()->GetGameState<AT2GameStateBase>();
-		if (IsValid(GS) == true)
+		AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
+		if (IsValid(GS))
 		{
 			GS->AddKeyCount(1);
 		}

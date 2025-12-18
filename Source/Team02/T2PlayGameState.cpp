@@ -18,17 +18,26 @@ void AT2PlayGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AT2PlayGameState, MatchResult);
 }
 
-void AT2PlayGameState::AddCollectedKey()
+// ★ 팀원 함수명에 맞춤! ★
+void AT2PlayGameState::AddKeyCount(int32 Amount)
 {
     if (GetLocalRole() != ROLE_Authority) return;
 
-    CollectedKeys++;
+    CollectedKeys += Amount;
+
+    UE_LOG(LogTemp, Warning, TEXT("Key Collected!  Total:  %d / %d"), CollectedKeys, RequiredKeys);
 
     // 열쇠 다 모으면 탈출문 열림
     if (CollectedKeys >= RequiredKeys)
     {
         SetEscapeGateOpen(true);
     }
+}
+
+// 기존 함수 (AddKeyCount 호출)
+void AT2PlayGameState::AddCollectedKey()
+{
+    AddKeyCount(1);
 }
 
 void AT2PlayGameState::OnSurvivorDied()
@@ -62,8 +71,7 @@ void AT2PlayGameState::SetMatchResult(EMatchResult Result)
 
 void AT2PlayGameState::OnRep_CollectedKeys()
 {
-    // UI 업데이트 등
-    UE_LOG(LogTemp, Warning, TEXT("Keys Collected: %d / %d"), CollectedKeys, RequiredKeys);
+    UE_LOG(LogTemp, Warning, TEXT("Keys Collected:  %d / %d"), CollectedKeys, RequiredKeys);
 }
 
 void AT2PlayGameState::OnRep_EscapeGateOpen()
@@ -79,5 +87,4 @@ void AT2PlayGameState::OnRep_SurvivorsAlive()
 void AT2PlayGameState::OnRep_MatchResult()
 {
     UE_LOG(LogTemp, Warning, TEXT("Match Result Changed: %d"), (int32)MatchResult);
-    // 여기서 결과 UI 표시 트리거
 }
