@@ -26,7 +26,14 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void ASurvivorPlayerState::OnRep_HP()
 {
-    OnHPChanged.Broadcast(CurrentHP, MaxHP);
+    if (!IsValid(this))
+	{
+		return;
+	}
+	
+	OnHPChanged.Broadcast(CurrentHP, MaxHP);
+
+	UE_LOG(LogTemp, Warning, TEXT("OnHPChanged.Broadcast(CurrentHP, MaxHP);"));
 }
 
 void ASurvivorPlayerState::OnRep_IsDead()
@@ -34,18 +41,42 @@ void ASurvivorPlayerState::OnRep_IsDead()
     if (bIsDead)
     {
         UE_LOG(LogTemp, Warning, TEXT("Player %s is DEAD"), *GetPlayerName());
-        // »ç¸Á UI Ç¥½Ã µî
+        // ï¿½ï¿½ï¿½ UI Ç¥ï¿½ï¿½ ï¿½ï¿½
     }
 }
 
 void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 {
-    if (!HasAuthority()) return;
-    if (bIsDead) return;  // ÀÌ¹Ì Á×¾úÀ¸¸é ¹«½Ã
+    if (bIsDead) return;  // ï¿½Ì¹ï¿½ ï¿½×¾ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
     CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
+  
+	if (!HasAuthority())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Client attempting to ApplyDamage! (DENIED)")); 
+		return;
+	}
 
-    // HP°¡ 0ÀÌ µÇ¸é »ç¸Á Ã³¸®
+	AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
+
+	if (IsValid(Player) == false)
+	{
+		return;
+	}
+
+	if (CurrentHP > 0)
+	{
+		Player->Multicast_PlayHitMontage();
+	}
+	else
+	{
+		Player->OnDeath();
+	}
+	
+	//DEBUGGING LOG
+	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
+
+    // HPï¿½ï¿½ 0ï¿½ï¿½ ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
     if (CurrentHP <= 0)
     {
         SetDead();
@@ -59,13 +90,13 @@ void ASurvivorPlayerState::SetDead()
 
     bIsDead = true;
 
-    // GameState¿¡ ¾Ë¸²
+    // GameStateï¿½ï¿½ ï¿½Ë¸ï¿½
     if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
     {
         GS->OnSurvivorDied();
     }
 
-    // Ä³¸¯ÅÍ »ç¸Á Ã³¸®
+    // Ä³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
     if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
     {
         Player->OnDeath();
@@ -79,7 +110,7 @@ void ASurvivorPlayerState::SetEscaped()
 
     bIsEscaped = true;
 
-    // GameState¿¡ ¾Ë¸²
+    // GameStateï¿½ï¿½ ï¿½Ë¸ï¿½
     if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
     {
         GS->OnSurvivorEscaped();

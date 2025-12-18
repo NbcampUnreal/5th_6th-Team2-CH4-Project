@@ -6,9 +6,10 @@
 #include "Character/KillerCharacter/T2KillerCharacter.h" 
 #include "PlayerState/Player/SurvivorPlayerState.h" 
 #include "DrawDebugHelpers.h"
+#include "Engine/OverlapResult.h"
 
 void UKillerAttackHitBox::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
-	float TotalDuration, const FAnimNotifyEventReference& EventReference)
+                                      float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
@@ -35,14 +36,16 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		return;
 	}
 	
-	FVector CurrentWeaponLocation = MeshComp->GetSocketLocation(TEXT("AxeSocket"));
+	// 킬러 앞쪽으로 박스 트레이스
+	FVector KillerLocation = KillerCharacter->GetActorLocation();
+	FVector ForwardVector = KillerCharacter->GetActorForwardVector();
 	
-	FVector StartLocation = PreviousWeaponLocation;
-	FVector EndLocation = CurrentWeaponLocation;
+	// 박스 설정 (폭, 높이, 깊이)
+	FVector BoxHalfSize(80.0f, 70.0f, 50.0f); // X=앞뒤, Y=좌우, Z=상하
+	float TraceDistance = 100.0f; // 앞으로 얼마나 멀리 체크할지
 	
-	const float CapsuleRadius = 40.0f; 
-	const float CapsuleHalfHeight = 150.0f;
-	FCollisionShape TraceShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
+	FVector StartLocation = KillerLocation + FVector(0, 0, 50.0f); // 약간 위에서 시작
+	FVector EndLocation = StartLocation + (ForwardVector * TraceDistance);
 	
 	TArray<FHitResult> HitResults;
 	FCollisionQueryParams Params;
@@ -53,13 +56,16 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		Params.AddIgnoredActor(HitActor);
 	}
 	
+	// 박스 트레이스 실행
+	FQuat BoxRotation = KillerCharacter->GetActorRotation().Quaternion();
+	
 	bool bHit = MeshComp->GetWorld()->SweepMultiByChannel(
 		HitResults,
 		StartLocation,
 		EndLocation,
-		FQuat::Identity,
-		ECC_Pawn, 
-		TraceShape, 
+		BoxRotation,
+		ECC_Pawn,
+		FCollisionShape::MakeBox(BoxHalfSize),
 		Params
 	);
 
@@ -68,70 +74,58 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 		for (const FHitResult& HitResult : HitResults)
 		{
 			APawn* HitPawn = Cast<APawn>(HitResult.GetActor());
-			if (HitPawn)
+			if (HitPawn && HitPawn != KillerCharacter)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("SERVER: Sweep Hit Pawn: %s"), *HitPawn->GetName());
-    
-				if (HitPawn == KillerCharacter) continue;
+				// 이미 맞은 액터 스킵
+				if (HitActors.Contains(HitPawn))
+				{
+					continue;
+				}
 
-				APlayerState* GenericPS = HitPawn->GetPlayerState();
-    
-				if (GenericPS)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("SERVER: Hit Pawn PlayerState Found. Class Name: %s"), *GenericPS->GetClass()->GetName());
-				}
-				else
-				{
-					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s has NO PlayerState."), *HitPawn->GetName());
-				}
+				UE_LOG(LogTemp, Warning, TEXT("SERVER: Box Sweep Hit Pawn: %s"), *HitPawn->GetName());
 
 				ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(HitPawn->GetPlayerState());
-    
+				
 				if (!SurvivorPS)
 				{
 					if (Cast<AT2KillerCharacter>(HitPawn))
 					{
-						UE_LOG(LogTemp, Warning, TEXT("SERVER: Hit Pawn is the Killer Character itself. Ignoring."));
-						continue; 
+						continue;
 					}
-        
-					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s does NOT have a valid SurvivorPlayerState."), *HitPawn->GetName());
+					
+					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s has NO SurvivorPlayerState."), *HitPawn->GetName());
 					continue;
 				}
-    
-				UE_LOG(LogTemp, Warning, TEXT("SERVER HIT SUCCESS: Target %s, Applying Damage."), *HitPawn->GetName());
-    
-				SurvivorPS->ApplyDamage(40.f);
-
-				KillerCharacter->OnHitSuccessful(HitPawn, HitResult.ImpactPoint);
-
-				HitActors.AddUnique(HitResult.GetActor());
-
 				
+				UE_LOG(LogTemp, Warning, TEXT("SERVER HIT SUCCESS: Target %s, Applying Damage."), *HitPawn->GetName());
+				
+				SurvivorPS->ApplyDamage(40.f);
+				KillerCharacter->OnHitSuccessful(HitPawn, HitResult.ImpactPoint);
+				HitActors.AddUnique(HitPawn);
 			}
 		}
-
-		
 	}
 
-	PreviousWeaponLocation = CurrentWeaponLocation;
-	
-	DrawDebugCapsule(
+	// 디버그 박스 그리기
+	FVector BoxCenter = (StartLocation + EndLocation) / 2.0f;
+	DrawDebugBox(
 		MeshComp->GetWorld(),
-		(StartLocation + EndLocation) / 2.f, 
-		CapsuleHalfHeight,
-		CapsuleRadius,
-		FRotationMatrix::MakeFromX(EndLocation - StartLocation).ToQuat(),
+		BoxCenter,
+		BoxHalfSize,
+		BoxRotation,
 		bHit ? FColor::Red : FColor::Green,
 		false,
-		FrameDeltaTime * 2.0f, // <-- 짧은 시간 동안만 표시
+		FrameDeltaTime * 2.0f,
 		0,
-		3.f
-		);
+		3.0f
+	);
+
+	PreviousWeaponLocation = MeshComp->GetSocketLocation(TEXT("AxeSocket"));
 }
 
 void UKillerAttackHitBox::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
 	const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
+	HitActors.Empty();
 }

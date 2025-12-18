@@ -81,16 +81,6 @@ void AT2BaseCharacter::HandleLookInput(const FInputActionValue& InValue)
 	AddControllerPitchInput(InLookVector.Y);
 }
 
-void AT2BaseCharacter::AnimNotify_DeathEnd()
-{
-	UE_LOG(LogTemp, Warning, TEXT("AnimNotify_DeathEnd | Authority=%d"), HasAuthority());
-
-	if (!HasAuthority())
-	{
-		Server_NotifyDeathMontageEnded();
-	}
-}
-
 void AT2BaseCharacter::Multicast_PlayHitMontage_Implementation()
 {
 	if (UAnimInstance* Anim = GetMesh()->GetAnimInstance())
@@ -111,15 +101,6 @@ void AT2BaseCharacter::Multicast_PlayDeathMontage_Implementation()
 			Anim->Montage_Play(DeathMontage);
 		}
 	}
-}
-
-void AT2BaseCharacter::Server_NotifyDeathMontageEnded_Implementation()
-{
-	if (bDeathMontageEndedHandled) return;
-	bDeathMontageEndedHandled = true;
-
-	DetachFromControllerPendingDestroy();
-	Destroy();
 }
 
 

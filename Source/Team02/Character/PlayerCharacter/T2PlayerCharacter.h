@@ -37,6 +37,8 @@ public:
 
 	void OnDeath();
 
+	void OnDeathMontageEneded();
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USpringArmComponent> SpringArmComponent;
