@@ -99,15 +99,15 @@ void ASurvivorPlayerState::OnRep_VisionDebuff()
 
 void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 {
-    if (bIsDead) return;  // �̹� �׾����� ����
-
-    CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
+    if (bIsDead) return; 
   
 	if (!HasAuthority())
 	{
 		UE_LOG(LogTemp, Error, TEXT("Client attempting to ApplyDamage! (DENIED)")); 
 		return;
 	}
+
+	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
 
 	AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
 
@@ -127,33 +127,8 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 	
 	//DEBUGGING LOG
 	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
-
-    // HP�� 0�� �Ǹ� ��� ó��
-    if (CurrentHP <= 0)
-    {
-        SetDead();
-    }
 }
 
-void ASurvivorPlayerState::SetDead()
-{
-    if (!HasAuthority()) return;
-    if (bIsDead) return;
-
-    bIsDead = true;
-
-    // GameState�� �˸�
-    if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
-    {
-        GS->OnSurvivorDied();
-    }
-
-    // ĳ���� ��� ó��
-    if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
-    {
-        Player->OnDeath();
-    }
-}
 
 void ASurvivorPlayerState::SetEscaped()
 {

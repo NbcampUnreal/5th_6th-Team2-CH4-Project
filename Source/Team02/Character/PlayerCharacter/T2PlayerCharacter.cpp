@@ -11,6 +11,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameMode/T2GameModeBase.h"
+#include "GameMode/TestGameMode.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -187,10 +188,16 @@ void AT2PlayerCharacter::OnDeath()
 	{
 		Multicast_PlayDeathMontage();
 
-		AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>();
+		ATestGameMode* GM = GetWorld()->GetAuthGameMode<ATestGameMode>();
 		if (IsValid(GM) == true)
 		{
-			GM->OnPlayerDead(this);
+			AT2PlayerController* PC = Cast<AT2PlayerController>(GetOwner());
+			{
+				if (IsValid(PC) == true)
+				{
+					GM->OnCharacterDead(PC);
+				}
+			}
 		}
 	}
 }
