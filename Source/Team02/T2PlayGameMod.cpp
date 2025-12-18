@@ -1,54 +1,138 @@
 #include "T2PlayGameMod.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
+#include "PlayerState/T2PlayerState.h"
 
 AT2PlayGameMod::AT2PlayGameMod()
 {
-    // ★ 기본 Pawn 클래스를 nullptr로 두지 말고, 하나 지정 ★
-    // DefaultPawnClass = nullptr;  // 이거 삭제하거나 주석처리
 }
 
 void AT2PlayGameMod::BeginPlay()
 {
     Super::BeginPlay();
-    UE_LOG(LogTemp, Warning, TEXT("=== T2PlayGameMod BeginPlay ==="));
+}
+
+APlayerController* AT2PlayGameMod::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+    EPlayerRole AssignedRole = AssignRoleForNewPlayer(Options);
+    PendingRole = AssignedRole;
+
+    TSubclassOf<APlayerController> ControllerClassToUse = nullptr;
+
+    if (AssignedRole == EPlayerRole::Killer && KillerControllerClass)
+    {
+        ControllerClassToUse = KillerControllerClass;
+    }
+    else if (AssignedRole == EPlayerRole::Survivor && SurvivorControllerClass)
+    {
+        ControllerClassToUse = SurvivorControllerClass;
+    }
+    else
+    {
+        ControllerClassToUse = PlayerControllerClass;
+    }
+
+    TSubclassOf<APlayerController> OriginalClass = PlayerControllerClass;
+    PlayerControllerClass = ControllerClassToUse;
+
+    APlayerController* NewController = Super::Login(NewPlayer, InRemoteRole, Portal, Options, UniqueId, ErrorMessage);
+
+    PlayerControllerClass = OriginalClass;
+    PendingRole = EPlayerRole::None;
+
+    if (NewController)
+    {
+        PlayerRoles.Add(NewController, AssignedRole);
+    }
+
+    return NewController;
+}
+
+// ★ 함수 하나만!  (5명 기준 새 버전) ★
+EPlayerRole AT2PlayGameMod::AssignRoleForNewPlayer(const FString& Options)
+{
+    UT2GameInstance* GI = Cast<UT2GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+
+    FString RoleOption = UGameplayStatics::ParseOption(Options, TEXT("Role"));
+
+    if (!RoleOption.IsEmpty())
+    {
+        if (RoleOption == TEXT("Killer") && CurrentKillers < MaxKillers)
+        {
+            CurrentKillers++;
+            return EPlayerRole::Killer;
+        }
+        else if (RoleOption == TEXT("Survivor") && CurrentSurvivors < MaxSurvivors)
+        {
+            CurrentSurvivors++;
+            return EPlayerRole::Survivor;
+        }
+    }
+
+    if (GI && GI->SelectedRole != EPlayerRole::None)
+    {
+        EPlayerRole WantedRole = GI->SelectedRole;
+
+        if (WantedRole == EPlayerRole::Killer && CurrentKillers < MaxKillers)
+        {
+            CurrentKillers++;
+            return EPlayerRole::Killer;
+        }
+        else if (WantedRole == EPlayerRole::Survivor && CurrentSurvivors < MaxSurvivors)
+        {
+            CurrentSurvivors++;
+            return EPlayerRole::Survivor;
+        }
+    }
+
+    // 자동 배정
+    if (CurrentKillers < MaxKillers)
+    {
+        CurrentKillers++;
+        return EPlayerRole::Killer;
+    }
+    else if (CurrentSurvivors < MaxSurvivors)
+    {
+        CurrentSurvivors++;
+        return EPlayerRole::Survivor;
+    }
+
+    return EPlayerRole::None;
+}
+
+EPlayerRole AT2PlayGameMod::GetPlayerRoleFromMap(AController* Player)
+{
+    if (PendingRole != EPlayerRole::None)
+    {
+        return PendingRole;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(Player);
+    if (PC && PlayerRoles.Contains(PC))
+    {
+        return PlayerRoles[PC];
+    }
+    return EPlayerRole::None;
 }
 
 void AT2PlayGameMod::PostLogin(APlayerController* NewPlayer)
 {
-    UE_LOG(LogTemp, Warning, TEXT("=== PostLogin START ==="));
-
-    if (!NewPlayer)
-    {
-        UE_LOG(LogTemp, Error, TEXT("NewPlayer is NULL! "));
-        return;
-    }
-
-    // ★ 역할 배정을 Super::PostLogin 전에 해야 함!  ★
-    EPlayerRole AssignedRole = AssignRoleToPlayer(NewPlayer);
-    PlayerRoles.Add(NewPlayer, AssignedRole);
-
-    UE_LOG(LogTemp, Warning, TEXT("Role Assigned: %d (1=Killer, 2=Survivor)"), (int32)AssignedRole);
-
-    // ★ 이제 Super 호출 (여기서 Pawn 스폰됨) ★
     Super::PostLogin(NewPlayer);
 
-    // 입력 모드 설정
+    if (!NewPlayer) return;
+
+    if (AT2PlayerState* PS = NewPlayer->GetPlayerState<AT2PlayerState>())
+    {
+        EPlayerRole* FoundRole = PlayerRoles.Find(NewPlayer);
+        if (FoundRole)
+        {
+            PS->SetPlayerRole(*FoundRole);
+        }
+    }
+
     FInputModeGameOnly InputMode;
     NewPlayer->SetInputMode(InputMode);
     NewPlayer->bShowMouseCursor = false;
-
-    UE_LOG(LogTemp, Warning, TEXT("=== PostLogin END ==="));
-
-    // 스폰된 Pawn 확인
-    if (NewPlayer->GetPawn())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Pawn Spawned: %s"), *NewPlayer->GetPawn()->GetName());
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("No Pawn spawned!"));
-    }
 }
 
 void AT2PlayGameMod::Logout(AController* Exiting)
@@ -58,110 +142,35 @@ void AT2PlayGameMod::Logout(AController* Exiting)
     {
         EPlayerRole ExitingRole = PlayerRoles[PC];
 
+        // ★ 새 변수 사용 ★
         if (ExitingRole == EPlayerRole::Killer)
         {
-            bKillerTaken = false;
+            CurrentKillers--;
         }
         else if (ExitingRole == EPlayerRole::Survivor)
         {
-            bSurvivorTaken = false;
+            CurrentSurvivors--;
         }
 
         PlayerRoles.Remove(PC);
-        UE_LOG(LogTemp, Warning, TEXT("Player Left.  Role %d released. "), (int32)ExitingRole);
     }
 
     Super::Logout(Exiting);
 }
 
-EPlayerRole AT2PlayGameMod::AssignRoleToPlayer(APlayerController* Player)
-{
-    // 호스트는 GameInstance에서 선택한 역할 사용
-    if (Player && Player->IsLocalController())
-    {
-        UT2GameInstance* GI = Cast<UT2GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-        if (GI && GI->SelectedRole != EPlayerRole::None)
-        {
-            EPlayerRole WantedRole = GI->SelectedRole;
-
-            if (WantedRole == EPlayerRole::Killer && !bKillerTaken)
-            {
-                bKillerTaken = true;
-                UE_LOG(LogTemp, Warning, TEXT("Host -> Killer"));
-                return EPlayerRole::Killer;
-            }
-            else if (WantedRole == EPlayerRole::Survivor && !bSurvivorTaken)
-            {
-                bSurvivorTaken = true;
-                UE_LOG(LogTemp, Warning, TEXT("Host -> Survivor"));
-                return EPlayerRole::Survivor;
-            }
-        }
-    }
-
-    // 클라이언트는 남은 역할 자동 배정
-    if (!bKillerTaken)
-    {
-        bKillerTaken = true;
-        UE_LOG(LogTemp, Warning, TEXT("Auto -> Killer"));
-        return EPlayerRole::Killer;
-    }
-    else if (!bSurvivorTaken)
-    {
-        bSurvivorTaken = true;
-        UE_LOG(LogTemp, Warning, TEXT("Auto -> Survivor"));
-        return EPlayerRole::Survivor;
-    }
-
-    return EPlayerRole::None;
-}
-
-EPlayerRole AT2PlayGameMod::GetPlayerRoleFromMap(AController* Player)
-{
-    APlayerController* PC = Cast<APlayerController>(Player);
-    if (PC && PlayerRoles.Contains(PC))
-    {
-        return PlayerRoles[PC];
-    }
-
-    // ★ 역할이 없으면 호스트의 GameInstance에서 가져오기 ★
-    if (Player && Player->IsLocalController())
-    {
-        UT2GameInstance* GI = Cast<UT2GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-        if (GI && GI->SelectedRole != EPlayerRole::None)
-        {
-            return GI->SelectedRole;
-        }
-    }
-
-    return EPlayerRole::None;
-}
-
 UClass* AT2PlayGameMod::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
-    UE_LOG(LogTemp, Warning, TEXT("=== GetDefaultPawnClass ==="));
-
     EPlayerRole FoundRole = GetPlayerRoleFromMap(InController);
-    UE_LOG(LogTemp, Warning, TEXT("Role: %d"), (int32)FoundRole);
 
-    if (FoundRole == EPlayerRole::Killer)
+    if (FoundRole == EPlayerRole::Killer && KillerClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("KillerClass: %s"), KillerClass ? *KillerClass->GetName() : TEXT("NULL"));
-        if (KillerClass)
-        {
-            return KillerClass;
-        }
+        return KillerClass;
     }
-    else if (FoundRole == EPlayerRole::Survivor)
+    else if (FoundRole == EPlayerRole::Survivor && SurvivorClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("SurvivorClass: %s"), SurvivorClass ? *SurvivorClass->GetName() : TEXT("NULL"));
-        if (SurvivorClass)
-        {
-            return SurvivorClass;
-        }
+        return SurvivorClass;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Using Super class"));
     return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
 
@@ -173,12 +182,51 @@ AActor* AT2PlayGameMod::ChoosePlayerStart_Implementation(AController* Player)
     TArray<AActor*> SpawnPoints;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), SpawnTag, SpawnPoints);
 
-    UE_LOG(LogTemp, Warning, TEXT("SpawnTag: %s, Found:  %d"), *SpawnTag.ToString(), SpawnPoints.Num());
-
     if (SpawnPoints.Num() > 0)
     {
         return SpawnPoints[0];
     }
 
     return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+void AT2PlayGameMod::OnPlayerDied(APlayerController* Player)
+{
+    if (!HasAuthority()) return;
+    UE_LOG(LogTemp, Warning, TEXT("Player Died! "));
+    CheckWinConditions();
+}
+
+void AT2PlayGameMod::OnPlayerEscaped(APlayerController* Player)
+{
+    if (!HasAuthority()) return;
+    UE_LOG(LogTemp, Warning, TEXT("Player Escaped!"));
+    CheckWinConditions();
+}
+
+void AT2PlayGameMod::CheckWinConditions()
+{
+    if (bMatchEnded) return;
+
+    // TODO: GameState 만들면 여기서 체크
+    // AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
+    // if (!GS) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("CheckWinConditions called"));
+}
+
+void AT2PlayGameMod::EndMatch(EMatchResult Result)
+{
+    if (bMatchEnded) return;
+    bMatchEnded = true;
+
+    FString ResultStr;
+    switch (Result)
+    {
+    case EMatchResult::KillerWin:  ResultStr = TEXT("Killer Wins! "); break;
+    case EMatchResult::SurvivorWin: ResultStr = TEXT("Survivors Win!"); break;
+    default: ResultStr = TEXT("Draw"); break;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED:  %s ==="), *ResultStr);
 }
