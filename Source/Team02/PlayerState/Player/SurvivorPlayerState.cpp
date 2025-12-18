@@ -4,6 +4,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "T2PlayGameState.h"
 #include "Kismet/GameplayStatics.h"
+#include "T2PlayGameMod.h"
+#include "T2PlayGameState.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -137,22 +139,31 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 
 void ASurvivorPlayerState::SetDead()
 {
-    if (!HasAuthority()) return;
-    if (bIsDead) return;
+	if (!HasAuthority()) return;
+	if (bIsDead) return;
 
-    bIsDead = true;
+	bIsDead = true;
 
-    // GameState�� �˸�
-    if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
-    {
-        GS->OnSurvivorDied();
-    }
+	// GameState에 알림
+	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
+	{
+		GS->OnSurvivorDied();
+	}
 
-    // ĳ���� ��� ó��
-    if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
-    {
-        Player->OnDeath();
-    }
+	// ★ GameMode에 알림 → 승패 체크
+	if (AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>())
+	{
+		GM->OnPlayerDied(Cast<APlayerController>(GetOwner()));
+	}
+
+	// 캐릭터 사망 처리
+	if (APawn* MyPawn = GetPawn())
+	{
+		if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(MyPawn))
+		{
+			Player->OnDeath();
+		}
+	}
 }
 
 void ASurvivorPlayerState::SetEscaped()

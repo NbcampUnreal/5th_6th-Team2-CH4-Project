@@ -43,15 +43,23 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "Controllers")
     TSubclassOf<APlayerController> SurvivorControllerClass;
-    bool bMatchEnded = false;
+
 private:
+    //  최대 인원은 유지 
     int32 MaxKillers = 1;
     int32 MaxSurvivors = 4;
+
+    //  현재 카운트 
     int32 CurrentKillers = 0;
     int32 CurrentSurvivors = 0;
+
+    //  총 접속 인원 
+    int32 TotalPlayers = 0;
+
     TMap<APlayerController*, EPlayerRole> PlayerRoles;
+    EPlayerRole PendingRole = EPlayerRole::None;
+    bool bMatchEnded = false;
 
     EPlayerRole AssignRoleForNewPlayer(const FString& Options);
     EPlayerRole GetPlayerRoleFromMap(AController* Player);
-    EPlayerRole PendingRole = EPlayerRole::None;
 };

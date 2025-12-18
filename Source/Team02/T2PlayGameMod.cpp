@@ -48,56 +48,110 @@ APlayerController* AT2PlayGameMod::Login(UPlayer* NewPlayer, ENetRole InRemoteRo
     return NewController;
 }
 
-// ★ 함수 하나만!  (5명 기준 새 버전) ★
+
 EPlayerRole AT2PlayGameMod::AssignRoleForNewPlayer(const FString& Options)
 {
     UT2GameInstance* GI = Cast<UT2GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
-    FString RoleOption = UGameplayStatics::ParseOption(Options, TEXT("Role"));
+    UE_LOG(LogTemp, Warning, TEXT("=== AssignRole ==="));
+    UE_LOG(LogTemp, Warning, TEXT("Before - Killers: %d/%d, Survivors: %d/%d"),
+        CurrentKillers, MaxKillers, CurrentSurvivors, MaxSurvivors);
 
+    EPlayerRole WantedRole = EPlayerRole::None;
+
+    // 1. URL Options에서 역할 파싱
+    FString RoleOption = UGameplayStatics::ParseOption(Options, TEXT("Role"));
     if (!RoleOption.IsEmpty())
     {
-        if (RoleOption == TEXT("Killer") && CurrentKillers < MaxKillers)
-        {
-            CurrentKillers++;
-            return EPlayerRole::Killer;
-        }
-        else if (RoleOption == TEXT("Survivor") && CurrentSurvivors < MaxSurvivors)
-        {
-            CurrentSurvivors++;
-            return EPlayerRole::Survivor;
-        }
+        if (RoleOption == TEXT("Killer"))
+            WantedRole = EPlayerRole::Killer;
+        else if (RoleOption == TEXT("Survivor"))
+            WantedRole = EPlayerRole::Survivor;
     }
 
-    if (GI && GI->SelectedRole != EPlayerRole::None)
+    // 2. GameInstance에서 확인 (Options가 없을 때만)
+    if (WantedRole == EPlayerRole::None && GI && GI->SelectedRole != EPlayerRole::None)
     {
-        EPlayerRole WantedRole = GI->SelectedRole;
+        WantedRole = GI->SelectedRole;
+    }
 
-        if (WantedRole == EPlayerRole::Killer && CurrentKillers < MaxKillers)
+    // 3. 희망 역할 배정 시도, 불가능하면 반대 역할
+    EPlayerRole AssignedRole = EPlayerRole::None;
+
+    if (WantedRole == EPlayerRole::Killer)
+    {
+        if (CurrentKillers < MaxKillers)
         {
-            CurrentKillers++;
-            return EPlayerRole::Killer;
+            AssignedRole = EPlayerRole::Killer;
         }
-        else if (WantedRole == EPlayerRole::Survivor && CurrentSurvivors < MaxSurvivors)
+        else if (CurrentSurvivors < MaxSurvivors)
         {
-            CurrentSurvivors++;
-            return EPlayerRole::Survivor;
+            // Killer 꽉 참 → Survivor로
+            AssignedRole = EPlayerRole::Survivor;
+            UE_LOG(LogTemp, Warning, TEXT("Killer full, assigned SURVIVOR instead"));
+        }
+    }
+    else if (WantedRole == EPlayerRole::Survivor)
+    {
+        if (CurrentSurvivors < MaxSurvivors)
+        {
+            //Survivor 원하지만, Killer가 없으면 Killer로
+            if (CurrentKillers < MaxKillers && CurrentKillers == 0)
+            {
+                // 아직 Killer가 없고, 내가 첫 번째가 아니면 Killer로
+                // (첫 번째 = 호스트 = 희망대로)
+                if (CurrentSurvivors > 0)
+                {
+                    AssignedRole = EPlayerRole::Killer;
+                    UE_LOG(LogTemp, Warning, TEXT("No Killer yet, assigned KILLER instead"));
+                }
+                else
+                {
+                    // 첫 번째 접속자는 희망대로
+                    AssignedRole = EPlayerRole::Survivor;
+                }
+            }
+            else
+            {
+                AssignedRole = EPlayerRole::Survivor;
+            }
+        }
+        else if (CurrentKillers < MaxKillers)
+        {
+            // Survivor 꽉 참 → Killer로
+            AssignedRole = EPlayerRole::Killer;
+            UE_LOG(LogTemp, Warning, TEXT("Survivor full, assigned KILLER instead"));
+        }
+    }
+    else
+    {
+        // 희망 없음 → 자동 배정 (Killer 먼저)
+        if (CurrentKillers < MaxKillers)
+        {
+            AssignedRole = EPlayerRole::Killer;
+        }
+        else if (CurrentSurvivors < MaxSurvivors)
+        {
+            AssignedRole = EPlayerRole::Survivor;
         }
     }
 
-    // 자동 배정
-    if (CurrentKillers < MaxKillers)
+    // 카운트 증가
+    if (AssignedRole == EPlayerRole::Killer)
     {
         CurrentKillers++;
-        return EPlayerRole::Killer;
     }
-    else if (CurrentSurvivors < MaxSurvivors)
+    else if (AssignedRole == EPlayerRole::Survivor)
     {
         CurrentSurvivors++;
-        return EPlayerRole::Survivor;
     }
 
-    return EPlayerRole::None;
+    UE_LOG(LogTemp, Warning, TEXT("After - Assigned: %s, Killers:  %d, Survivors: %d"),
+        AssignedRole == EPlayerRole::Killer ? TEXT("KILLER") :
+        AssignedRole == EPlayerRole::Survivor ? TEXT("SURVIVOR") : TEXT("NONE"),
+        CurrentKillers, CurrentSurvivors);
+
+    return AssignedRole;
 }
 
 EPlayerRole AT2PlayGameMod::GetPlayerRoleFromMap(AController* Player)
@@ -121,6 +175,7 @@ void AT2PlayGameMod::PostLogin(APlayerController* NewPlayer)
 
     if (!NewPlayer) return;
 
+
     if (AT2PlayerState* PS = NewPlayer->GetPlayerState<AT2PlayerState>())
     {
         EPlayerRole* FoundRole = PlayerRoles.Find(NewPlayer);
@@ -130,9 +185,20 @@ void AT2PlayGameMod::PostLogin(APlayerController* NewPlayer)
         }
     }
 
+    //  GameState에 현재 생존자 수 설정 
+    if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
+    {
+        GS->TotalSurvivors = CurrentSurvivors;
+        GS->SurvivorsAlive = CurrentSurvivors;
+    }
+
+  
     FInputModeGameOnly InputMode;
     NewPlayer->SetInputMode(InputMode);
     NewPlayer->bShowMouseCursor = false;
+
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin - Total:  %d, Killers: %d, Survivors: %d"),
+        TotalPlayers, CurrentKillers, CurrentSurvivors);
 }
 
 void AT2PlayGameMod::Logout(AController* Exiting)
@@ -142,7 +208,7 @@ void AT2PlayGameMod::Logout(AController* Exiting)
     {
         EPlayerRole ExitingRole = PlayerRoles[PC];
 
-        // ★ 새 변수 사용 ★
+
         if (ExitingRole == EPlayerRole::Killer)
         {
             CurrentKillers--;
@@ -208,11 +274,31 @@ void AT2PlayGameMod::CheckWinConditions()
 {
     if (bMatchEnded) return;
 
-    // TODO: GameState 만들면 여기서 체크
-    // AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
-    // if (!GS) return;
+    AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
+    if (!GS) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("CheckWinConditions called"));
+    //  Killer 승리:  생존자 전원 사망 (0명)
+    if (GS->SurvivorsAlive <= 0)
+    {
+        // 탈출한 사람이 없으면 Killer 완승
+        if (GS->SurvivorsEscaped == 0)
+        {
+            EndMatch(EMatchResult::KillerWin);
+        }
+        else
+        {
+            // 일부 탈출했으면 Survivor 승리
+            EndMatch(EMatchResult::SurvivorWin);
+        }
+        return;
+    }
+
+    // Survivor 승리: 전원 탈출
+    if (GS->SurvivorsEscaped >= GS->TotalSurvivors)
+    {
+        EndMatch(EMatchResult::SurvivorWin);
+        return;
+    }
 }
 
 void AT2PlayGameMod::EndMatch(EMatchResult Result)
