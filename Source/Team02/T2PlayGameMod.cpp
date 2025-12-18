@@ -272,33 +272,43 @@ void AT2PlayGameMod::OnPlayerEscaped(APlayerController* Player)
 
 void AT2PlayGameMod::CheckWinConditions()
 {
-    if (bMatchEnded) return;
+    UE_LOG(LogTemp, Warning, TEXT("=== CheckWinConditions START ==="));
+
+    if (bMatchEnded)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Match already ended, skipping"));
+        return;
+    }
 
     AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
-    if (!GS) return;
+    if (!GS)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameState is NULL!"));
+        return;
+    }
 
-    //  Killer 승리:  생존자 전원 사망 (0명)
+    UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
+        GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
+
+    // Killer 승리:  생존자 전원 사망 (0명)
     if (GS->SurvivorsAlive <= 0)
     {
-        // 탈출한 사람이 없으면 Killer 완승
+        UE_LOG(LogTemp, Warning, TEXT("No survivors alive! "));
+
         if (GS->SurvivorsEscaped == 0)
         {
+            UE_LOG(LogTemp, Warning, TEXT("No one escaped - Killer Wins!"));
             EndMatch(EMatchResult::KillerWin);
         }
         else
         {
-            // 일부 탈출했으면 Survivor 승리
+            UE_LOG(LogTemp, Warning, TEXT("Some escaped - Survivor Wins!"));
             EndMatch(EMatchResult::SurvivorWin);
         }
         return;
     }
 
-    // Survivor 승리: 전원 탈출
-    if (GS->SurvivorsEscaped >= GS->TotalSurvivors)
-    {
-        EndMatch(EMatchResult::SurvivorWin);
-        return;
-    }
+    UE_LOG(LogTemp, Warning, TEXT("Game still in progress"));
 }
 
 void AT2PlayGameMod::EndMatch(EMatchResult Result)
@@ -306,13 +316,46 @@ void AT2PlayGameMod::EndMatch(EMatchResult Result)
     if (bMatchEnded) return;
     bMatchEnded = true;
 
+    AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
+    if (GS)
+    {
+        GS->SetMatchResult(Result);
+    }
+
     FString ResultStr;
     switch (Result)
     {
-    case EMatchResult::KillerWin:  ResultStr = TEXT("Killer Wins! "); break;
+    case EMatchResult::KillerWin:   ResultStr = TEXT("Killer Wins! "); break;
     case EMatchResult::SurvivorWin: ResultStr = TEXT("Survivors Win!"); break;
     default: ResultStr = TEXT("Draw"); break;
     }
 
     UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED:  %s ==="), *ResultStr);
+
+    //  게임 종료 처리
+
+    // 방법 1: N초 후 타이틀로 이동
+    FTimerHandle TimerHandle;
+    GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+        {
+            // 모든 플레이어를 타이틀 맵으로 이동
+            UWorld* World = GetWorld();
+            if (World)
+            {
+                // 서버 트래블 (모든 클라이언트도 같이 이동)
+                World->ServerTravel(TEXT("/Game/Library_Pack/Maps/Example? listen"));
+
+            }
+        }, 3.0f, false);  // 3초 후 이동
+
+    // 방법 2: 결과 UI 표시 (각 플레이어에게)
+    //for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+   // {
+    //    APlayerController* PC = It->Get();
+   //     if (PC)
+    //    {
+            // 클라이언트에게 결과 알림 (ClientRPC 필요하면 추가)
+            // 또는 GameState의 OnRep_MatchResult에서 UI 표시
+    //    }
+   // }
 }
