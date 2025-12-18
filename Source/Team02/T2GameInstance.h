@@ -5,7 +5,7 @@
 #include "T2GameInstance.generated.h"
 
 UENUM(BlueprintType)
-enum class EPlayerRole : uint8
+enum class EPlayerRoleGI : uint8
 {
     None,
     Killer,
@@ -19,7 +19,7 @@ class TEAM02_API UT2GameInstance : public UGameInstance
 
 public:
     UPROPERTY(BlueprintReadWrite, Category = "Game")
-    EPlayerRole SelectedRole = EPlayerRole::None;
+    EPlayerRoleGI SelectedRole = EPlayerRoleGI::None;
 
     UFUNCTION(BlueprintCallable, Category = "Network")
     void HostGame(const FString& MapName);

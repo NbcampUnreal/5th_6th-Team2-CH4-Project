@@ -13,14 +13,15 @@ void AT2PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 void AT2PlayerState::SetPlayerRole(EPlayerRole NewRole)
 {
-    if (HasAuthority())
-    {
-        PlayerRole = NewRole;
-        OnPlayerRoleChanged.Broadcast(PlayerRole);
-    }
+    if (!HasAuthority()) return;
+    
+    PlayerRole = NewRole;
+    OnRep_PlayerRole();
+    //OnPlayerRoleChanged.Broadcast(PlayerRole);
+    
 }
 
 void AT2PlayerState::OnRep_PlayerRole()
 {
-    OnPlayerRoleChanged.Broadcast(PlayerRole);
+   // OnPlayerRoleChanged.Broadcast(PlayerRole);
 }

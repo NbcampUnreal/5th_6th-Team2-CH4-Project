@@ -38,10 +38,10 @@ public:
 
     // 생존자 상태
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
-    int32 TotalSurvivors = 4;
+    int32 TotalSurvivorCount = 4;
 
     UPROPERTY(ReplicatedUsing = OnRep_SurvivorsAlive, BlueprintReadOnly, Category = "Match")
-    int32 SurvivorsAlive = 4;
+    int32 AliveSurvivorCount = 4;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
     int32 SurvivorsEscaped = 0;
@@ -53,8 +53,6 @@ public:
     // ========== 서버 전용 함수 ==========
 
     void AddCollectedKey();
-    void OnSurvivorDied();
-    void OnSurvivorEscaped();
     void SetEscapeGateOpen(bool bOpen);
     void SetMatchResult(EMatchResult Result);
 

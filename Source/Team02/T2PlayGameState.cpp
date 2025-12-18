@@ -12,8 +12,8 @@ void AT2PlayGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AT2PlayGameState, RequiredKeys);
     DOREPLIFETIME(AT2PlayGameState, CollectedKeys);
     DOREPLIFETIME(AT2PlayGameState, bEscapeGateOpen);
-    DOREPLIFETIME(AT2PlayGameState, TotalSurvivors);
-    DOREPLIFETIME(AT2PlayGameState, SurvivorsAlive);
+    DOREPLIFETIME(AT2PlayGameState, TotalSurvivorCount);
+    DOREPLIFETIME(AT2PlayGameState, AliveSurvivorCount);
     DOREPLIFETIME(AT2PlayGameState, SurvivorsEscaped);
     DOREPLIFETIME(AT2PlayGameState, MatchResult);
 }
@@ -23,27 +23,13 @@ void AT2PlayGameState::AddCollectedKey()
     if (GetLocalRole() != ROLE_Authority) return;
 
     CollectedKeys++;
+    OnRep_CollectedKeys();
 
     // 열쇠 다 모으면 탈출문 열림
     if (CollectedKeys >= RequiredKeys)
     {
         SetEscapeGateOpen(true);
     }
-}
-
-void AT2PlayGameState::OnSurvivorDied()
-{
-    if (GetLocalRole() != ROLE_Authority) return;
-
-    SurvivorsAlive = FMath::Max(0, SurvivorsAlive - 1);
-}
-
-void AT2PlayGameState::OnSurvivorEscaped()
-{
-    if (GetLocalRole() != ROLE_Authority) return;
-
-    SurvivorsEscaped++;
-    SurvivorsAlive = FMath::Max(0, SurvivorsAlive - 1);
 }
 
 void AT2PlayGameState::SetEscapeGateOpen(bool bOpen)
@@ -73,7 +59,7 @@ void AT2PlayGameState::OnRep_EscapeGateOpen()
 
 void AT2PlayGameState::OnRep_SurvivorsAlive()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Survivors Alive: %d"), SurvivorsAlive);
+    UE_LOG(LogTemp, Warning, TEXT("Survivors Alive: %d"), AliveSurvivorCount);
 }
 
 void AT2PlayGameState::OnRep_MatchResult()

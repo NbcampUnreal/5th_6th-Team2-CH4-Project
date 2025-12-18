@@ -10,13 +10,25 @@ class TEAM02_API AT2GameStateBase : public AGameStateBase
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(ReplicatedUsing = OnRep_KeyCount)
-	int32 TotalKeyCount;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int32 Countdown = -1;  //UI version
 
-	void AddKeyCount(int32 Amount);
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out) const override;
 
-	UFUNCTION()
-	void OnRep_KeyCount();
 
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+
+
+
+
+//public:
+//	UPROPERTY(ReplicatedUsing = OnRep_KeyCount)
+//	int32 TotalKeyCount;
+//
+//	void AddKeyCount(int32 Amount);
+//
+//	UFUNCTION()
+//	void OnRep_KeyCount();
+//
+//	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 };
