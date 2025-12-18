@@ -56,4 +56,16 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<UMaterial> ExplodedMaterial;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trap Settings", Meta = (AllowPrivateAccess))
+	float TrapDamage = 10.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trap Settings", Meta = (AllowPrivateAccess))
+	float SpeedReductionMultiplier = 0.5f;  
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trap Settings", Meta = (AllowPrivateAccess))
+	float SpeedDebuffDuration = 8.f;  
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trap Settings", Meta = (AllowPrivateAccess))
+	float VisionDebuffDuration = 5.f; 
 };

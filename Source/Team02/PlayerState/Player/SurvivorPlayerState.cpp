@@ -1,6 +1,7 @@
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "T2PlayGameState.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -22,6 +23,9 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
     DOREPLIFETIME(ASurvivorPlayerState, bIsDead);
     DOREPLIFETIME(ASurvivorPlayerState, bIsEscaped);
     DOREPLIFETIME(ASurvivorPlayerState, DownCount);
+
+	DOREPLIFETIME(ASurvivorPlayerState, bIsSpeedDebuffed);
+	DOREPLIFETIME(ASurvivorPlayerState, bIsVisionDebuffed);
 }
 
 void ASurvivorPlayerState::OnRep_HP()
@@ -43,6 +47,54 @@ void ASurvivorPlayerState::OnRep_IsDead()
         UE_LOG(LogTemp, Warning, TEXT("Player %s is DEAD"), *GetPlayerName());
         // ��� UI ǥ�� ��
     }
+}
+
+void ASurvivorPlayerState::ApplyTrapDebuff(float Damage, float SpeedMult, float SpeedDur, float VisionDur)
+{
+	if (!HasAuthority() || bIsDead) return;
+
+	ApplyDamage(Damage);
+
+	bIsSpeedDebuffed = true;
+	CurrentSpeedMultiplier = SpeedMult;
+	OnRep_UpdateSpeed();
+    
+	GetWorldTimerManager().SetTimer(SpeedDebuffTimerHandle, this, &ASurvivorPlayerState::ResetSpeedDebuff, SpeedDur, false);
+
+	bIsVisionDebuffed = true;
+	GetWorldTimerManager().SetTimer(VisionDebuffTimerHandle, this, &ASurvivorPlayerState::ResetVisionDebuff, VisionDur, false);
+	OnRep_VisionDebuff();
+}
+
+void ASurvivorPlayerState::ResetSpeedDebuff()
+{
+	bIsSpeedDebuffed = false;
+	CurrentSpeedMultiplier = 1.0f;
+	OnRep_UpdateSpeed();
+}
+
+void ASurvivorPlayerState::ResetVisionDebuff()
+{
+	bIsVisionDebuffed = false;
+	OnRep_VisionDebuff();
+}
+
+void ASurvivorPlayerState::OnRep_UpdateSpeed()
+{
+	if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
+	{
+		if (UCharacterMovementComponent* MoveComp = Player->GetCharacterMovement())
+		{
+			float BaseSpeed = 300.0f;
+			MoveComp->MaxWalkSpeed = bIsSpeedDebuffed ? (BaseSpeed * CurrentSpeedMultiplier) : BaseSpeed;
+		}
+	}
+}
+
+void ASurvivorPlayerState::OnRep_VisionDebuff()
+{
+	OnVisionDebuffChanged.Broadcast(bIsVisionDebuffed);
+	//UI
 }
 
 void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
