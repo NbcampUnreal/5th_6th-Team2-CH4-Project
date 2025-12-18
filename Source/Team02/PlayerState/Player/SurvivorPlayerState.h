@@ -4,6 +4,7 @@
 #include "PlayerState/T2PlayerState.h"
 #include "SurvivorPlayerState.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float);
 
 UCLASS()
@@ -14,7 +15,7 @@ class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
 public:
     virtual void BeginPlay() override;
 
-    // ========== HP ½Ã½ºÅÛ ==========
+    // ========== HP ï¿½Ã½ï¿½ï¿½ï¿½ ==========
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HP")
     float MaxHP = 100.f;
 
@@ -25,7 +26,7 @@ public:
 
     void ApplyDamage(float DamageAmount);
 
-    // ========== »ýÁ¸ÀÚ »óÅÂ (Ãß°¡) ==========
+    // ========== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ß°ï¿½) ==========
     UPROPERTY(ReplicatedUsing = OnRep_IsDead, BlueprintReadOnly, Category = "Status")
     bool bIsDead = false;
 
@@ -33,9 +34,9 @@ public:
     bool bIsEscaped = false;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Status")
-    int32 DownCount = 0;  // ´Ù¿î È½¼ö (¼±ÅÃÀû)
+    int32 DownCount = 0;  // ï¿½Ù¿ï¿½ È½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 
-    // »óÅÂ º¯°æ ÇÔ¼ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
     void SetDead();
     void SetEscaped();
 
@@ -47,4 +48,35 @@ protected:
 
     UFUNCTION()
     void OnRep_IsDead();
+
+#pragma region Debuffed
+public:
+    void ApplyTrapDebuff(float Damage, float SpeedMult, float SpeedDur, float VisionDur);
+
+    FOnVisionDebuffChanged OnVisionDebuffChanged;
+
+    float GetSpeedMultiplier() const { return bIsSpeedDebuffed ? CurrentSpeedMultiplier : 1.0f; }
+
+protected:
+    UPROPERTY(ReplicatedUsing = OnRep_UpdateSpeed)
+    bool bIsSpeedDebuffed = false;
+    
+    float CurrentSpeedMultiplier = 1.0f;
+
+    UPROPERTY(ReplicatedUsing = OnRep_VisionDebuff)
+    bool bIsVisionDebuffed = false;
+
+    FTimerHandle SpeedDebuffTimerHandle;
+    FTimerHandle VisionDebuffTimerHandle;
+
+    void ResetSpeedDebuff();
+    void ResetVisionDebuff();
+
+    UFUNCTION()
+    void OnRep_UpdateSpeed();
+
+    UFUNCTION()
+    void OnRep_VisionDebuff();
+
+#pragma endregion
 };

@@ -3,9 +3,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "T2GameInstance.h"
+#include "TimerManager.h"
 #include "T2PlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerRoleChanged, EPlayerRole, NewRole);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool);
 
 UCLASS()
 class TEAM02_API AT2PlayerState : public APlayerState

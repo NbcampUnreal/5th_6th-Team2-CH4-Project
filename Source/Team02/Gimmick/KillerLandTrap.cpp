@@ -8,6 +8,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 
 
 AKillerLandTrap::AKillerLandTrap()
@@ -31,8 +32,6 @@ AKillerLandTrap::AKillerLandTrap()
 	Particle->SetAutoActivate(false);
 
 	SetNetCullDistanceSquared(NetCullDistance * NetCullDistance);
-
-	//bAlwaysRelevant = true;
 }
 
 void AKillerLandTrap::BeginPlay()
@@ -83,28 +82,27 @@ void AKillerLandTrap::OnLandTrapBeginOverlap(AActor* OverlappedActor, AActor* Ot
 	{
 		return;
 	}
-	
+    
 	if (HasAuthority() == true)
 	{
-		if (bIsExploded == true)
+		if (bIsExploded == true) return; 
+
+		if (APawn* TargetPawn = Cast<APawn>(OtherActor))
 		{
-			return; 
+			if (ASurvivorPlayerState* SurvivorPS = TargetPawn->GetPlayerState<ASurvivorPlayerState>())
+			{
+				SurvivorPS->ApplyTrapDebuff(TrapDamage, SpeedReductionMultiplier, SpeedDebuffDuration, VisionDebuffDuration);
+                
+				UKismetSystemLibrary::PrintString(this, TEXT("Trap Activated on Survivor!"), true, true, FLinearColor::Red, 5.f);
+			}
 		}
 
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on server. Activating One-Time Trap.")), true, true, FLinearColor::Green, 5.f);
-
 		bIsExploded = true;
+		OnRep_IsExploded(); 
         
 		MulticastRPCSpawnEffect();
 
-		Destroy(); 
-	}
-	else
-	{
-		if (bIsExploded == false)
-		{
-			Particle->Activate(true); 
-		}
+		SetLifeSpan(2.0f); 
 	}
 }
 
