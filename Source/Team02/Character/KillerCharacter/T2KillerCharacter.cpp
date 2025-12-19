@@ -15,9 +15,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "Sound/SoundBase.h"
+#include "Components/AudioComponent.h"
+#include "Components/SpotLightComponent.h"
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	
 	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
 	FPSCamera->SetupAttachment(GetMesh(), TEXT("head"));
 	FPSCamera->bUsePawnControlRotation = true;
@@ -48,6 +52,16 @@ AT2KillerCharacter::AT2KillerCharacter()
 	FootAnchor->SetupAttachment(GetMesh());
 	FootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("FootFog"));
 	FootFog->SetupAttachment(FootAnchor);
+
+	BreathingAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("BreathingAudio"));
+	BreathingAudioComponent->SetupAttachment(GetMesh(), TEXT("head"));
+	BreathingAudioComponent->bAutoActivate = false;
+
+	KillerVisionLight = CreateDefaultSubobject<USpotLightComponent>(TEXT("KillerVisionLight"));
+	KillerVisionLight->SetupAttachment(FPSCamera); 
+
+	KillerVisionLight->SetCastShadows(false); 
+	KillerVisionLight->Intensity = 5000.f;
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -78,6 +92,28 @@ void AT2KillerCharacter::BeginPlay()
 	if (FPSCamera) 
 	{
 		DefaultFOV = FPSCamera->FieldOfView;
+	}
+
+	if (BreathingSound)
+	{
+		BreathingAudioComponent->SetSound(BreathingSound);
+		BreathingAudioComponent->Play();
+        
+		if (IsLocallyControlled())
+		{
+			BreathingAudioComponent->SetVolumeMultiplier(0.5f); 
+		}
+	}
+
+	if (KillerVisionLight)
+	{
+		bool bIsMyLocalKiller = IsLocallyControlled();
+		KillerVisionLight->SetVisibility(bIsMyLocalKiller);
+        
+		if (!bIsMyLocalKiller)
+		{
+			KillerVisionLight->DestroyComponent();
+		}
 	}
 }
 
@@ -334,7 +370,7 @@ void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
 {
 	if (!FootstepSound) return;
 	
-	float VolumeToUse = 0.7f; 
+	float VolumeToUse = 0.4f; 
 	if (bIsWalking)
 	{
 		VolumeToUse = WalkVolumeMultiplier; 
