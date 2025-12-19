@@ -48,6 +48,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<UParticleSystemComponent> Particle;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trap Settings", Meta = (AllowPrivateAccess))
+	TObjectPtr<USoundBase> TrapExplosionSound;
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsExploded)
 	uint8 bIsExploded : 1;
 

@@ -5,6 +5,7 @@
 
 #include "Character/KillerCharacter/T2KillerCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -108,6 +109,15 @@ void AKillerLandTrap::OnLandTrapBeginOverlap(AActor* OverlappedActor, AActor* Ot
 
 void AKillerLandTrap::MulticastRPCSpawnEffect_Implementation()
 {
+	if (Particle)
+	{
+		Particle->Activate(true);
+	}
+
+	if (TrapExplosionSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, TrapExplosionSound, GetActorLocation());
+	}
 }
 
 void AKillerLandTrap::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
