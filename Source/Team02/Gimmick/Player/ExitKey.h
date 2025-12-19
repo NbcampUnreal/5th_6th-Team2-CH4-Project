@@ -1,14 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "Gimmick/Player/ItemBase.h"
 #include "ExitKey.generated.h"
 
 class UStatickMeshComponent;
 class UCapsuleComponent;
 
 UCLASS()
-class TEAM02_API AExitKey : public AActor
+class TEAM02_API AExitKey : public AItemBase
 {
 	GENERATED_BODY()
 	
