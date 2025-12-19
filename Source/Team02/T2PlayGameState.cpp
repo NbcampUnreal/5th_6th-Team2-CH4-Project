@@ -18,7 +18,7 @@ void AT2PlayGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AT2PlayGameState, MatchResult);
 }
 
-// ¡Ú ÆÀ¿ø ÇÔ¼ö¸í¿¡ ¸ÂÃã! ¡Ú
+// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½! ï¿½ï¿½
 void AT2PlayGameState::AddKeyCount(int32 Amount)
 {
     if (GetLocalRole() != ROLE_Authority) return;
@@ -27,14 +27,14 @@ void AT2PlayGameState::AddKeyCount(int32 Amount)
 
     UE_LOG(LogTemp, Warning, TEXT("Key Collected!  Total:  %d / %d"), CollectedKeys, RequiredKeys);
 
-    // ¿­¼è ´Ù ¸ðÀ¸¸é Å»Ãâ¹® ¿­¸²
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å»ï¿½â¹® ï¿½ï¿½ï¿½ï¿½
     if (CollectedKeys >= RequiredKeys)
     {
         SetEscapeGateOpen(true);
     }
 }
 
-// ±âÁ¸ ÇÔ¼ö (AddKeyCount È£Ãâ)
+// ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ (AddKeyCount È£ï¿½ï¿½)
 void AT2PlayGameState::AddCollectedKey()
 {
     AddKeyCount(1);

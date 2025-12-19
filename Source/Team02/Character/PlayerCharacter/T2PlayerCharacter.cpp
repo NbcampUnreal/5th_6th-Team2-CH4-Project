@@ -2,6 +2,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "T2PlayGameMod.h"
+#include "T2PlayGameState.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Gimmick/Player/FlashlightComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -200,6 +202,33 @@ void AT2PlayerCharacter::OnDeath()
 			}
 		}
 	}
+
+	if (!HasAuthority()) return;
+	
+	// 1. GameStateì— ì•Œë¦¼ (SurvivorsAlive ê°ì†Œ)
+	AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
+	if (GS)
+	{
+		GS->OnSurvivorDied();
+		UE_LOG(LogTemp, Warning, TEXT("GameState->OnSurvivorDied called.  SurvivorsAlive:  %d"), GS->SurvivorsAlive);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameState is NULL in SetDead!"));
+	}
+
+	// 2. GameModeì— ì•Œë¦¼ (ìŠ¹íŒ¨ ì²´í¬)
+	AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>();
+	if (GM)
+	{
+		GM->OnPlayerDied(nullptr);
+		UE_LOG(LogTemp, Warning, TEXT("GameMode->OnPlayerDied called"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameMode is NULL in SetDead! "));
+	}
+	
 }
 
 void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
@@ -222,50 +251,50 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 	//FirstPerson
 	if (bIsFirstPerson)
 	{
-		// Ä«¸Þ¶ó È°¼ºÈ­
+		// Ä«ï¿½Þ¶ï¿½ È°ï¿½ï¿½È­
 		FirstPersonCamera->SetActive(true);
 		ThirdPersonCamera->SetActive(false);
 
-		// ½Ã¾ß¿¡¼­ ¸ö ¼û±â±â
+		// ï¿½Ã¾ß¿ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
 		GetMesh()->SetOwnerNoSee(true);
 		FirstPersonArms->SetOwnerNoSee(false);
 		FirstPersonArms->SetVisibility(true, true);
 
 		FlashlightMesh->SetOwnerNoSee(true);
 
-		// ÄÁÆ®·Ñ·¯ È¸Àü ¡æ Ä«¸Þ¶ó È¸Àü
+		// ï¿½ï¿½Æ®ï¿½Ñ·ï¿½ È¸ï¿½ï¿½ ï¿½ï¿½ Ä«ï¿½Þ¶ï¿½ È¸ï¿½ï¿½
 		bUseControllerRotationYaw = true;
 		bUseControllerRotationPitch = true;
 
-		// ÀÌµ¿ ¹æÇâ °ü·Ã ¼¼ÆÃ (Ä³¸¯ÅÍ´Â ¸¶¿ì½º È¸Àü¿¡ µû¶ó °°ÀÌ È¸Àü)
+		// ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (Ä³ï¿½ï¿½ï¿½Í´ï¿½ ï¿½ï¿½ï¿½ì½º È¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½)
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 		GetCharacterMovement()->RotationRate = FRotator(0, 500, 0);
 
-		// spring arm ºñÈ°¼ºÈ­
+		// spring arm ï¿½ï¿½È°ï¿½ï¿½È­
 		SpringArmComponent->bUsePawnControlRotation = false;
 	}
 	//ThirdPerson
 	else
 	{
-		// Ä«¸Þ¶ó È°¼ºÈ­
+		// Ä«ï¿½Þ¶ï¿½ È°ï¿½ï¿½È­
 		ThirdPersonCamera->SetActive(true);
 		FirstPersonCamera->SetActive(false);
 
-		// Ä³¸¯ÅÍ Ç®¹Ùµð ´Ù½Ã º¸ÀÌ°Ô
+		// Ä³ï¿½ï¿½ï¿½ï¿½ Ç®ï¿½Ùµï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½Ì°ï¿½
 		GetMesh()->SetOwnerNoSee(false);
 		FirstPersonArms->SetOwnerNoSee(true);
 		FirstPersonArms->SetVisibility(false, true);
 
 		FlashlightMesh->SetOwnerNoSee(false);
 
-		// ¸¶¿ì½º ¿òÁ÷ÀÓÀº ½ºÇÁ¸µ¾Ï È¸Àü¸¸ Á¦¾îÇÏµµ·Ï
+		// ï¿½ï¿½ï¿½ì½º ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationPitch = false;
 
-		// ÀÌµ¿ ¹æÇâÀ» ±âÁØÀ¸·Î Ä³¸¯ÅÍ È¸Àü
+		// ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä³ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		// ½ºÇÁ¸µ¾ÏÀÌ ÄÁÆ®·Ñ·¯ È¸ÀüÀ» µû¶ó°¡°Ô
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ñ·ï¿½ È¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ó°¡°ï¿½
 		SpringArmComponent->bUsePawnControlRotation = true;
 	}
 }
