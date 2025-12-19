@@ -5,9 +5,18 @@
 void UUW_SurvivorHUD::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    UE_LOG(LogTemp, Warning, TEXT("UW_SurvivorHUD NativeConstruct"));
+
     if (HP)
     {
-        HP->SetFillColorAndOpacity(FLinearColor(0.8f, 0.1f, 0.1f, 1.f));
+
+        HP->SetFillColorAndOpacity(FLinearColor(0.9f, 0.0f, 0.0f, 1.f));
+
+
+        HP->SetPercent(1.0f);
+
+        UE_LOG(LogTemp, Warning, TEXT("HP ProgressBar found"));
     }
 
     if (Item)
@@ -15,6 +24,22 @@ void UUW_SurvivorHUD::NativeConstruct()
         Item->SetVisibility(ESlateVisibility::Hidden);
     }
 
+    TryBindToPlayerState();
+}
+
+void UUW_SurvivorHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    if (!bIsBound)
+    {
+        TryBindToPlayerState();
+    }
+}
+
+void UUW_SurvivorHUD::TryBindToPlayerState()
+{
+    if (bIsBound) return;
 
     APlayerController* PC = GetOwningPlayer();
     if (!PC) return;
@@ -22,16 +47,16 @@ void UUW_SurvivorHUD::NativeConstruct()
     ASurvivorPlayerState* PS = PC->GetPlayerState<ASurvivorPlayerState>();
     if (!PS) return;
 
-
     HPChangedHandle = PS->OnHPChanged.AddUObject(this, &UUW_SurvivorHUD::UpdateHP);
-
+    bIsBound = true;
 
     UpdateHP(PS->CurrentHP, PS->MaxHP);
+
+    UE_LOG(LogTemp, Warning, TEXT("HP Binding SUCCESS"));
 }
 
 void UUW_SurvivorHUD::NativeDestruct()
 {
-
     APlayerController* PC = GetOwningPlayer();
     if (PC)
     {
@@ -46,9 +71,13 @@ void UUW_SurvivorHUD::NativeDestruct()
 
 void UUW_SurvivorHUD::UpdateHP(float CurrentHP, float MaxHP)
 {
+    UE_LOG(LogTemp, Error, TEXT("=== UpdateHP Called === Current:  %f, Max: %f"), CurrentHP, MaxHP);
+
     if (HP && MaxHP > 0.f)
     {
-        HP->SetPercent(CurrentHP / MaxHP);
+        float Percent = CurrentHP / MaxHP;
+        HP->SetPercent(Percent);
+        UE_LOG(LogTemp, Error, TEXT("HP Bar Percent set to: %f"), Percent);
     }
 }
 

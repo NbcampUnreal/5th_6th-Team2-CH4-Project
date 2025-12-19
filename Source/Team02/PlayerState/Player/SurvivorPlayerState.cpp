@@ -4,6 +4,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "T2PlayGameState.h"
 #include "Kismet/GameplayStatics.h"
+#include "T2PlayGameMod.h"
+#include "T2PlayGameState.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -31,13 +33,13 @@ void ASurvivorPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 void ASurvivorPlayerState::OnRep_HP()
 {
     if (!IsValid(this))
-	{
-		return;
-	}
-	
-	OnHPChanged.Broadcast(CurrentHP, MaxHP);
+    {
+        return;
+    }
 
-	UE_LOG(LogTemp, Warning, TEXT("OnHPChanged.Broadcast(CurrentHP, MaxHP);"));
+    OnHPChanged.Broadcast(CurrentHP, MaxHP);
+
+    UE_LOG(LogTemp, Warning, TEXT("OnHPChanged.Broadcast(CurrentHP, MaxHP);"));
 }
 
 void ASurvivorPlayerState::OnRep_IsDead()
@@ -99,36 +101,83 @@ void ASurvivorPlayerState::OnRep_VisionDebuff()
 
 void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 {
-    if (bIsDead) return; 
-  
-	if (!HasAuthority())
-	{
-		UE_LOG(LogTemp, Error, TEXT("Client attempting to ApplyDamage! (DENIED)")); 
-		return;
-	}
+    if (bIsDead) return;
 
-	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
+    CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.f, MaxHP);
 
-	AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
+    if (!HasAuthority())
+    {
+        UE_LOG(LogTemp, Error, TEXT("Client attempting to ApplyDamage!  (DENIED)"));
+        return;
+    }
 
-	if (IsValid(Player) == false)
-	{
-		return;
-	}
 
-	if (CurrentHP > 0)
-	{
-		Player->Multicast_PlayHitMontage();
-	}
-	else
-	{
-		Player->OnDeath();
-	}
-	
-	//DEBUGGING LOG
-	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
+    OnHPChanged.Broadcast(CurrentHP, MaxHP);
+    UE_LOG(LogTemp, Warning, TEXT("Server Broadcast - HP:  %f / %f"), CurrentHP, MaxHP);
+
+    AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
+
+    if (IsValid(Player) == false)
+    {
+        return;
+    }
+
+    if (CurrentHP > 0)
+    {
+        Player->Multicast_PlayHitMontage();
+    }
+    else
+    {
+        Player->OnDeath();
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
+
+    if (CurrentHP <= 0)
+    {
+        SetDead();
+    }
 }
+void ASurvivorPlayerState::SetDead()
+{
+    if (!HasAuthority()) return;
+    if (bIsDead) return;
 
+    bIsDead = true;
+
+    UE_LOG(LogTemp, Warning, TEXT("=== SetDead Called ==="));
+
+    // 1. GameState에 알림 (SurvivorsAlive 감소)
+    AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
+    if (GS)
+    {
+        GS->OnSurvivorDied();
+        UE_LOG(LogTemp, Warning, TEXT("GameState->OnSurvivorDied called.  SurvivorsAlive:  %d"), GS->SurvivorsAlive);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameState is NULL in SetDead!"));
+    }
+
+    // 2. GameMode에 알림 (승패 체크)
+    AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>();
+    if (GM)
+    {
+        GM->OnPlayerDied(nullptr);
+        UE_LOG(LogTemp, Warning, TEXT("GameMode->OnPlayerDied called"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameMode is NULL in SetDead! "));
+    }
+
+    // 3. 캐릭터 사망 처리
+    if (APawn* MyPawn = GetPawn())
+    {
+        // 사망 애니메이션 등
+        UE_LOG(LogTemp, Warning, TEXT("Pawn death processing... "));
+    }
+}
 
 void ASurvivorPlayerState::SetEscaped()
 {
