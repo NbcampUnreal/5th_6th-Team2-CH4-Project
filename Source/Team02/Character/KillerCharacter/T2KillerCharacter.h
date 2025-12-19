@@ -13,6 +13,7 @@ class UStaticMeshComponent;
 class UT2CooldownComponent;
 class UUW_KillerHUD;
 class UT2FogComponent;
+class UT2KillerDetectionComponent;
 
 /**
  * 
@@ -57,6 +58,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", Replicated) 
 	TObjectPtr<UT2CooldownComponent> CooldownComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<class UAudioComponent> BreathingAudioComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<class USoundBase> BreathingSound;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "KillerEffects")
+	TObjectPtr<class USpotLightComponent> KillerVisionLight;
+	
 #pragma endregion
 
 #pragma region Killer Input
@@ -105,6 +115,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayHitSound(FVector ImpactLocation);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayAttackMontage();
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Attack")
 	UAnimMontage* AttackMontage;
@@ -114,14 +127,11 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Attack") 
 	TObjectPtr<USoundBase> AttackHitSound;
-	
-	UPROPERTY(ReplicatedUsing = OnRep_IsAttacking)
+
+	UPROPERTY(Replicated)
 	bool bIsAttacking = false;
 
 	FTimerHandle AttackTimerHandle;
-
-	UFUNCTION()
-	void OnRep_IsAttacking();
 
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
@@ -145,6 +155,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
 	TObjectPtr<USoundBase> LandTrapSound;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UT2KillerDetectionComponent> DetectionComponent;
 
 #pragma endregion
 
@@ -196,7 +210,7 @@ protected:
 	float WalkSpeedMultiplier = 0.20f; 
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float BaseMaxWalkSpeed = 600.0f;
+	float BaseMaxWalkSpeed = 500.0f;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Footstep")

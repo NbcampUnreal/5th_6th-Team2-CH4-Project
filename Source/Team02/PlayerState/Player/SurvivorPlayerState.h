@@ -54,12 +54,19 @@ public:
 
     float GetSpeedMultiplier() const { return bIsSpeedDebuffed ? CurrentSpeedMultiplier : 1.0f; }
 
+    UFUNCTION(BlueprintCallable, Category = "Status")
+    bool IsDetectedByKiller() const { return bIsVisionDebuffed; }
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnVisionDebuffChanged OnDetectionStatusChanged;
+
 protected:
     UPROPERTY(ReplicatedUsing = OnRep_UpdateSpeed)
     bool bIsSpeedDebuffed = false;
     
+    UPROPERTY(Replicated)  
     float CurrentSpeedMultiplier = 1.0f;
-
+    
     UPROPERTY(ReplicatedUsing = OnRep_VisionDebuff)
     bool bIsVisionDebuffed = false;
 
