@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/KillerCharacter/T2KillerCharacter.h"
 
 #include "EnhancedInputComponent.h"
@@ -11,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Component/T2CooldownComponent.h"
 #include "Component/T2FogComponent.h"
+#include "Component/T2KillerDetectionComponent.h"  
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
@@ -18,8 +18,6 @@
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
-	
-	
 	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
 	FPSCamera->SetupAttachment(GetMesh(), TEXT("head"));
 	FPSCamera->bUsePawnControlRotation = true;
@@ -44,11 +42,12 @@ AT2KillerCharacter::AT2KillerCharacter()
 
 	CooldownComponent = CreateDefaultSubobject<UT2CooldownComponent>(TEXT("CooldownComponent"));
 
+	DetectionComponent = CreateDefaultSubobject<UT2KillerDetectionComponent>(TEXT("DetectionComponent"));
+
 	FootAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("FootAnchor"));
 	FootAnchor->SetupAttachment(GetMesh());
 	FootFog = CreateDefaultSubobject<UT2FogComponent>(TEXT("FootFog"));
 	FootFog->SetupAttachment(FootAnchor);
-	
 }
 
 void AT2KillerCharacter::BeginPlay()
@@ -57,7 +56,7 @@ void AT2KillerCharacter::BeginPlay()
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
-		if (PC -> PlayerCameraManager)
+		if (PC->PlayerCameraManager)
 		{
 			PC->PlayerCameraManager->ViewPitchMin = -55.0f; 
 			PC->PlayerCameraManager->ViewPitchMax = 60.0f;  
@@ -76,7 +75,10 @@ void AT2KillerCharacter::BeginPlay()
 		BaseMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed; 
 	}
 
-	if (FPSCamera) DefaultFOV = FPSCamera->FieldOfView;
+	if (FPSCamera) 
+	{
+		DefaultFOV = FPSCamera->FieldOfView;
+	}
 }
 
 void AT2KillerCharacter::Tick(float DeltaTime)
@@ -140,7 +142,6 @@ void AT2KillerCharacter::InputDash(const FInputActionValue& InValue)
 	{
 		ServerRPCDash();
 	}
-	
 }
 
 void AT2KillerCharacter::ToggleCameraView(const FInputActionValue& InValue)
@@ -188,12 +189,10 @@ void AT2KillerCharacter::StartWalk()
 	bIsWalking = true;  
 	UpdateMovementSpeed();
 
-
 	ServerToggleWalk(true);  
 	
 	UKismetSystemLibrary::PrintString(this, TEXT("Walk Started"), true, true, FLinearColor::Blue, 1.f);
 }
-
 
 void AT2KillerCharacter::EndWalk()
 {
@@ -237,6 +236,20 @@ void AT2KillerCharacter::PlayAttackHitSound(const FVector& Location)
 	}
 }
 
+void AT2KillerCharacter::MulticastPlayAttackMontage_Implementation()
+{
+	if (!AttackMontage) return;
+	
+	PlayAnimMontage(AttackMontage);
+	
+	if (AttackSwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackSwingSound, GetActorLocation());
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("Montage Playing on %s"), HasAuthority() ? TEXT("Server") : TEXT("Client"));
+}
+
 void AT2KillerCharacter::MulticastRPC_PlayHitSound_Implementation(FVector ImpactLocation)
 {
 	if (AttackSwingSound) 
@@ -247,17 +260,6 @@ void AT2KillerCharacter::MulticastRPC_PlayHitSound_Implementation(FVector Impact
 	if (AttackHitSound) 
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, AttackHitSound, ImpactLocation);
-	}
-}
-
-void AT2KillerCharacter::OnRep_IsAttacking()
-{
-	if (bIsAttacking && AttackMontage)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OnRep_IsAttacking: play montage on %s"),
-		   HasAuthority() ? TEXT("Server") : TEXT("Client"));
-
-		PlayAnimMontage(AttackMontage);
 	}
 }
 
@@ -332,13 +334,11 @@ void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
 {
 	if (!FootstepSound) return;
 	
-	
 	float VolumeToUse = 0.7f; 
 	if (bIsWalking)
 	{
 		VolumeToUse = WalkVolumeMultiplier; 
 	}
-	
 
 	const FName FootSocketName = bIsLeftFoot ? FName(TEXT("foot_l")) : FName(TEXT("foot_r"));
     
@@ -360,12 +360,10 @@ void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
 
 	FString FootstepType = bIsWalking ? TEXT("Walk") : TEXT("Run");
 	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Footstep: %s (Vol: %.2f) at %s"), *FootstepType, VolumeToUse, *FootSocketName.ToString()), true, true, FLinearColor::White, 0.5f);
-
 }
 
 void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
 {
-
 	if (IsValid(CooldownComponent))
 	{
 		if (CooldownComponent->GetIsLandTrapOnCooldown())
@@ -400,7 +398,6 @@ bool AT2KillerCharacter::ServerRPCSpawnLandTrap_Validate()
 	return true;
 }
 
-
 void AT2KillerCharacter::ServerRPCDash_Implementation()
 {
 	if (IsValid(CooldownComponent) && CooldownComponent->GetIsDashOnCooldown()) 
@@ -433,7 +430,6 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 	}
 
 	ClientRPC_OnDashSuccess();
-	
 }
 
 bool AT2KillerCharacter::ServerRPCDash_Validate()
@@ -446,13 +442,10 @@ void AT2KillerCharacter::ServerAttack_Implementation()
 	if (bIsAttacking || !AttackMontage) return;
 
 	bIsAttacking = true;
-	float Duration = PlayAnimMontage(AttackMontage);
-
-	if (AttackSwingSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, AttackSwingSound, GetActorLocation()); 
-	}
 	
+	MulticastPlayAttackMontage();
+	
+	float Duration = AttackMontage->GetPlayLength();
 	if (Duration > 0.0f)
 	{
 		GetWorldTimerManager().SetTimer(
