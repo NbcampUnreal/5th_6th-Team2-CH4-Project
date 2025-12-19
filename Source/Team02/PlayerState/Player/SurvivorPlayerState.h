@@ -15,7 +15,6 @@ class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
 public:
     virtual void BeginPlay() override;
 
-    // ========== HP �ý��� ==========
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HP")
     float MaxHP = 100.f;
 
@@ -26,7 +25,6 @@ public:
 
     void ApplyDamage(float DamageAmount);
 
-    // ========== ������ ���� (�߰�) ==========
     UPROPERTY(ReplicatedUsing = OnRep_IsDead, BlueprintReadOnly, Category = "Status")
     bool bIsDead = false;
 
@@ -34,10 +32,8 @@ public:
     bool bIsEscaped = false;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Status")
-    int32 DownCount = 0;  // �ٿ� Ƚ�� (������)
+    int32 DownCount = 0;  
 
-    // ���� ���� �Լ�
-    void SetDead();
     void SetEscaped();
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

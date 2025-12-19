@@ -11,6 +11,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameMode/T2GameModeBase.h"
+#include "GameMode/TestGameMode.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -45,8 +46,14 @@ AT2PlayerCharacter::AT2PlayerCharacter()
 	FirstPersonCamera->SetupAttachment(GetMesh(), TEXT("head"));
 	FirstPersonCamera->bUsePawnControlRotation = true;
 
+	FP_ArmPivot = CreateDefaultSubobject<USceneComponent>(TEXT("FP_ArmPivot"));
+	FP_ArmPivot->SetupAttachment(FirstPersonCamera);
+
+	FP_ArmPivot->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+	FP_ArmPivot->SetRelativeLocation(FVector(0.f, 0.f, -10.f));
+
 	FirstPersonArms = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonArmMesh"));
-	FirstPersonArms->SetupAttachment(FirstPersonCamera);
+	FirstPersonArms->SetupAttachment(FP_ArmPivot);
 	FirstPersonArms->SetOnlyOwnerSee(true);
 	FirstPersonArms->SetCastShadow(false);
 	FirstPersonArms->SetVisibility(false, true);
@@ -181,10 +188,16 @@ void AT2PlayerCharacter::OnDeath()
 	{
 		Multicast_PlayDeathMontage();
 
-		AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>();
+		ATestGameMode* GM = GetWorld()->GetAuthGameMode<ATestGameMode>();
 		if (IsValid(GM) == true)
 		{
-			GM->OnPlayerDead(this);
+			AT2PlayerController* PC = Cast<AT2PlayerController>(GetOwner());
+			{
+				if (IsValid(PC) == true)
+				{
+					GM->OnCharacterDead(PC);
+				}
+			}
 		}
 	}
 }
@@ -218,6 +231,8 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 		FirstPersonArms->SetOwnerNoSee(false);
 		FirstPersonArms->SetVisibility(true, true);
 
+		FlashlightMesh->SetOwnerNoSee(true);
+
 		// 컨트롤러 회전 → 카메라 회전
 		bUseControllerRotationYaw = true;
 		bUseControllerRotationPitch = true;
@@ -240,6 +255,8 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 		GetMesh()->SetOwnerNoSee(false);
 		FirstPersonArms->SetOwnerNoSee(true);
 		FirstPersonArms->SetVisibility(false, true);
+
+		FlashlightMesh->SetOwnerNoSee(false);
 
 		// 마우스 움직임은 스프링암 회전만 제어하도록
 		bUseControllerRotationYaw = false;

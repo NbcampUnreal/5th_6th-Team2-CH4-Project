@@ -5,6 +5,8 @@
 
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "GameFramework/Controller.h"
+#include "Controller/Player/T2PlayerController.h"
+#include "Kismet/GameplayStatics.h"
 
 ATestGameMode::ATestGameMode()
 {
@@ -90,4 +92,35 @@ void ATestGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	PlayerCount++;
+
+	AT2PlayerController* NewPlayerController = Cast<AT2PlayerController>(NewPlayer);
+	if (IsValid(NewPlayerController) == true)
+	{
+		AlivePlayerControllers.Add(NewPlayerController);
+	}
+}
+
+void ATestGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	AT2PlayerController* ExitingPlayerController = Cast<AT2PlayerController>(Exiting);
+	if (IsValid(ExitingPlayerController) == true && AlivePlayerControllers.Find(ExitingPlayerController) != INDEX_NONE)
+	{
+		AlivePlayerControllers.Remove(ExitingPlayerController);
+		DeadPlayerControllers.Add(ExitingPlayerController);
+	}
+}
+
+void ATestGameMode::OnCharacterDead(AT2PlayerController* InController)
+{
+	if (IsValid(InController) == false || AlivePlayerControllers.Find(InController) == INDEX_NONE)
+	{
+		return;
+	}
+
+	AlivePlayerControllers.Remove(InController);
+	DeadPlayerControllers.Add(InController);
+
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Alive Player Number : %d / Dead Player Number : %d"), AlivePlayerControllers.Num(), DeadPlayerControllers.Num()), true, true, FLinearColor::Green, 5.f);
 }
