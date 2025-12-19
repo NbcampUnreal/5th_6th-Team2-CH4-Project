@@ -65,14 +65,16 @@ void ASurvivorPlayerState::ApplyTrapDebuff(float Damage, float SpeedMult, float 
 
 	bIsVisionDebuffed = true;
 	GetWorldTimerManager().SetTimer(VisionDebuffTimerHandle, this, &ASurvivorPlayerState::ResetVisionDebuff, VisionDur, false);
-	OnRep_VisionDebuff();
+	OnVisionDebuffChanged.Broadcast(true);
+	UE_LOG(LogTemp, Warning, TEXT("Vision Debuff Applied - Broadcast: TRUE"));
 }
 
 void ASurvivorPlayerState::ResetSpeedDebuff()
 {
 	bIsSpeedDebuffed = false;
 	CurrentSpeedMultiplier = 1.0f;
-	OnRep_UpdateSpeed();
+	OnVisionDebuffChanged.Broadcast(false);
+	UE_LOG(LogTemp, Warning, TEXT("Vision Debuff Reset - Broadcast: FALSE"));
 }
 
 void ASurvivorPlayerState::ResetVisionDebuff()
@@ -85,7 +87,7 @@ void ASurvivorPlayerState::OnRep_UpdateSpeed()
 {
 	if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn()))
 	{
-		if (UCharacterMovementComponent* MoveComp = Player->GetCharacterMovement())
+		if (UCharacterMovementComponent* MoveComp = Player->GetCharacterMovement()) 
 		{
 			float BaseSpeed = 300.0f;
 			MoveComp->MaxWalkSpeed = bIsSpeedDebuffed ? (BaseSpeed * CurrentSpeedMultiplier) : BaseSpeed;
@@ -96,7 +98,7 @@ void ASurvivorPlayerState::OnRep_UpdateSpeed()
 void ASurvivorPlayerState::OnRep_VisionDebuff()
 {
 	OnVisionDebuffChanged.Broadcast(bIsVisionDebuffed);
-	//UI
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_VisionDebuff - Client Broadcast: %s"), bIsVisionDebuffed ? TEXT("TRUE") : TEXT("FALSE"));
 }
 
 void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
