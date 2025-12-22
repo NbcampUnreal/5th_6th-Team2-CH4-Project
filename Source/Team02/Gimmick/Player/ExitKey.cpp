@@ -2,7 +2,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
 #include "T2PlayGameState.h"
-#include "Character/KillerCharacter/T2KillerCharacter.h"
 
 // Sets default values
 AExitKey::AExitKey()

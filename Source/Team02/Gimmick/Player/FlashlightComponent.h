@@ -5,6 +5,7 @@
 #include "FlashlightComponent.generated.h"
 
 class USpotLightComponent;
+class USoundBase;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TEAM02_API UFlashlightComponent : public UActorComponent
@@ -26,6 +27,9 @@ public:
 public:
 	UPROPERTY()
 	TObjectPtr<USpotLightComponent> CachedSpotLight;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Flashlight|Sound")
+	TObjectPtr<USoundBase> ToggleSound;
 
 	UPROPERTY(EditDefaultsOnly)
 	float MaxBattery = 100.f;

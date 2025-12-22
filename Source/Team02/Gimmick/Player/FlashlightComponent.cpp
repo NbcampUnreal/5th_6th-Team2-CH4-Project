@@ -2,6 +2,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/SpotLightComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 UFlashlightComponent::UFlashlightComponent()
 {
@@ -103,6 +105,8 @@ void UFlashlightComponent::ApplyFlashlightState()
 	{
 		if (PawnOnwer->IsLocallyControlled())
 		{
+			UGameplayStatics::PlaySound2D(this, ToggleSound);
+
 			CachedSpotLight->SetIntensity(50000.f);
 			CachedSpotLight->SetAttenuationRadius(1000.f);
 		}
@@ -110,6 +114,13 @@ void UFlashlightComponent::ApplyFlashlightState()
 		{
 			CachedSpotLight->SetIntensity(10000.f);
 			CachedSpotLight->SetAttenuationRadius(700.f);
+		}
+	}
+	if (!bIsOn)
+	{
+		if (PawnOnwer->IsLocallyControlled())
+		{
+			UGameplayStatics::PlaySound2D(this, ToggleSound);
 		}
 	}
 }
