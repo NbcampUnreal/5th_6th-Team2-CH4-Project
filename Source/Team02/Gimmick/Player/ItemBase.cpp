@@ -62,11 +62,11 @@ void AItemBase::OnOverlapBegin(
 {
 	if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(OtherActor))
 	{
-		Player->SetInteractableItem(this);
+		Player->AddNearbyItem(this);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("OverlapBegin"));
-	DebugDrawCapsule();
+	//DebugDrawCapsule();
 }
 
 void AItemBase::OnOverlapEnd(
@@ -79,7 +79,7 @@ void AItemBase::OnOverlapEnd(
 	{
 		if (AT2PlayerController* PC = Cast<AT2PlayerController>(Player->GetController()))
 		{
-			Player->ClearInteractableItem(this);
+			Player->RemoveNearbyItem(this);
 			PC->StopInteractUI();
 		}
 	}
@@ -127,25 +127,26 @@ void AItemBase::OnRep_InteractingPC()
 	//UpdateInteractionState();  UI "Other Player Using"
 }
 
+//Box Component Range TEST
 void AItemBase::DebugDrawCapsule()
 {
-	if (!InteractiongBox) return;
+	//if (!InteractiongBox) return;
 
-	const FVector Location = InteractiongBox->GetComponentLocation();
-	const FQuat Rotation = InteractiongBox->GetComponentQuat();
-	const FVector Extent = InteractiongBox->GetScaledBoxExtent(); // ÇÙ½É
+	//const FVector Location = InteractiongBox->GetComponentLocation();
+	//const FQuat Rotation = InteractiongBox->GetComponentQuat();
+	//const FVector Extent = InteractiongBox->GetScaledBoxExtent(); // ÇÙ½É
 
-	DrawDebugBox(
-		GetWorld(),
-		Location,
-		Extent,
-		Rotation,
-		FColor::Green,
-		false,
-		0.1f,
-		0,
-		2.f
-	);
+	//DrawDebugBox(
+	//	GetWorld(),
+	//	Location,
+	//	Extent,
+	//	Rotation,
+	//	FColor::Green,
+	//	false,
+	//	0.1f,
+	//	0,
+	//	2.f
+	//);
 }
 
 

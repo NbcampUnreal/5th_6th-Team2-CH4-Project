@@ -63,6 +63,12 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CancelInteract(AItemBase* Item);
 
+	void AddNearbyItem(AItemBase* Item);
+
+	void RemoveNearbyItem(AItemBase* Item);
+
+	void UpdateInteractTarget();
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USpringArmComponent> SpringArmComponent;
@@ -100,10 +106,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<AItemBase> CurrentInteractItem;
 
+	UPROPERTY()
+	TSet<TObjectPtr<AItemBase>> NearbyItems;
+
 protected:
 	float CurrentInteractTime = 0.f;
-	float RequiredInteractTime = 1.0f;
+	float RequiredInteractTime = 1.5f;
 	bool bIsInteracting = false;
+
+	FTimerHandle InteractTraceTimer;
 
 
 #pragma region TEST

@@ -18,6 +18,7 @@
 #include "GameFramework/Controller.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/UW_RoundProgressBar.h"
+#include "Team02.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -107,6 +108,14 @@ void AT2PlayerCharacter::BeginPlay()
 		GetMesh(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		FName("hand_rSocket")
+	);
+
+	GetWorldTimerManager().SetTimer(
+		InteractTraceTimer,
+		this,
+		&AT2PlayerCharacter::UpdateInteractTarget,
+		0.05f,
+		true
 	);
 }
 
@@ -322,27 +331,6 @@ void AT2PlayerCharacter::OnDeathMontageEneded()
 
 void AT2PlayerCharacter::SetInteractableItem(AItemBase* Item)
 {
-	//FHitResult Hit;
-	//FVector Start = FirstPersonCamera->GetComponentLocation();
-	//FVector End = Start + FirstPersonCamera->GetForwardVector() * 300.f;
-
-	//bool bHit = GetWorld()->LineTraceSingleByChannel(
-	//	Hit,
-	//	Start,
-	//	End,
-	//	ECC_Visibility);
-
-	//if (bHit)
-	//{
-	//	if (Item = Cast<AItemBase>(Hit.GetActor()))
-	//	{
-	//		//if (NearbyItems.Contains(Item))
-	//		//{
-	//		//	SetFocusedItem(Item);
-	//		//	return;
-	//		//}
-	//	}
-	//}
 	CurrentInteractItem = Item;
 	//ShowInteractionUI(true);
 }
@@ -423,5 +411,70 @@ void AT2PlayerCharacter::Server_CancelInteract_Implementation(AItemBase* Item)
 	if (IsValid(Item) == false) return;
 
 	Item->CanelInteract(this);
+}
+
+
+void AT2PlayerCharacter::AddNearbyItem(AItemBase* Item)
+{
+	if (!IsValid(Item)) return;
+
+	NearbyItems.Add(Item);
+}
+
+void AT2PlayerCharacter::RemoveNearbyItem(AItemBase* Item)
+{
+	if (!IsValid(Item)) return;
+
+	NearbyItems.Remove(Item);
+
+	if (CurrentInteractItem == Item)
+	{
+		CurrentInteractItem = nullptr;
+	}
+}
+
+void AT2PlayerCharacter::UpdateInteractTarget()
+{
+	FHitResult Hit;
+
+	FVector Start = FirstPersonCamera->GetComponentLocation();
+	FVector End = Start + FirstPersonCamera->GetForwardVector() * 300.f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
+		Start,
+		End,
+		ECC_Interact,
+		Params);
+
+	//LineTrace TEST
+//#if ENABLE_DRAW_DEBUG
+//	DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 0.05f, 0, 1.f);
+//#endif
+
+	if (bHit)
+	{
+		if (AItemBase* HitItem = Cast<AItemBase>(Hit.GetActor()))
+		{
+			if (NearbyItems.Contains(HitItem))
+			{
+				CurrentInteractItem = HitItem;
+				return;
+			}
+		}
+	}
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->StopInteractUI();
+	}
+
+	Server_CancelInteract(CurrentInteractItem);
+	CurrentInteractItem = nullptr;
+
+	
 }
 
