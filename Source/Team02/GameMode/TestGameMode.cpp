@@ -29,6 +29,7 @@ ATestGameMode::ATestGameMode()
 APlayerController* ATestGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
 {
 	int32 CurrentNumPlayers = GetNumPlayers();
+	UE_LOG(LogTemp, Warning, TEXT("Current Num Players: %d"), CurrentNumPlayers);
 
 	TSubclassOf<APlayerState> OriginalPSClass = PlayerStateClass;
 	TSubclassOf<APlayerController> OriginalPCClass = PlayerControllerClass;
@@ -37,7 +38,7 @@ APlayerController* ATestGameMode::SpawnPlayerController(ENetRole InRemoteRole, c
 	{
 		if (TestSurvivorControllerClass)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Spawning Survivor Controller for Player 0"));
+			UE_LOG(LogTemp, Warning, TEXT("Assigning SURVIVOR Classes"));
 			PlayerControllerClass = TestSurvivorControllerClass;
 		}
 	}
@@ -45,32 +46,18 @@ APlayerController* ATestGameMode::SpawnPlayerController(ENetRole InRemoteRole, c
 	{
 		if (TestKillerControllerClass)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Spawning Killer Controller for Player 1"));
+			UE_LOG(LogTemp, Warning, TEXT("Assigning KILLER Classes"));
 			PlayerControllerClass = TestKillerControllerClass;
 
 			if (TestKillerPlayerStateClass) 
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Assigning KILLER PlayerState Class"));
 				PlayerStateClass = TestKillerPlayerStateClass; 
 			}
 		}
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Current Num Players: %d"), CurrentNumPlayers);
-
-	if (CurrentNumPlayers == 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Assigning SURVIVOR Class"));
-		PlayerControllerClass = TestSurvivorControllerClass;
-	}
-	else if (CurrentNumPlayers == 1)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Assigning KILLER Class"));
-		PlayerControllerClass = TestKillerControllerClass;
-	}
-
 	APlayerController* NewPC = Super::SpawnPlayerController(InRemoteRole, Options);
-	
+    
 	PlayerControllerClass = OriginalPCClass;
 	PlayerStateClass = OriginalPSClass;
 
