@@ -25,6 +25,8 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void OnRep_PlayerState() override;
@@ -69,6 +71,7 @@ public:
 
 	void UpdateInteractTarget();
 
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USpringArmComponent> SpringArmComponent;
@@ -112,6 +115,8 @@ public:
 protected:
 	float CurrentInteractTime = 0.f;
 	float RequiredInteractTime = 1.5f;
+
+	UPROPERTY(Replicated)
 	bool bIsInteracting = false;
 
 	FTimerHandle InteractTraceTimer;

@@ -89,9 +89,21 @@ void AT2PlayerCharacter::Tick(float DeltaTime)
 	}
 }
 
+void AT2PlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AT2PlayerCharacter, bIsInteracting);
+}
+
 void AT2PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	FirstPersonCamera->SetActive(true);
+	ThirdPersonCamera->SetActive(false);
+	GetMesh()->SetOwnerNoSee(true);
+	FlashlightMesh->SetOwnerNoSee(true);
 
 	if (IsLocallyControlled())
 	{
@@ -346,7 +358,9 @@ void AT2PlayerCharacter::ClearInteractableItem(AItemBase* Item)
 
 void AT2PlayerCharacter::OnInteractStart()
 {
+	if (!IsLocallyControlled()) return;
 	if (!CurrentInteractItem) return;
+	if (bIsInteracting) return;
 
 	bIsInteracting = true;
 	CurrentInteractTime = 0.f;
@@ -363,7 +377,8 @@ void AT2PlayerCharacter::OnInteractStart()
 
 void AT2PlayerCharacter::OnInteractCompleted()
 {
-	if (!CurrentInteractItem) return;
+	if (!IsLocallyControlled()) return;
+	if (!bIsInteracting) return;
 
 	bIsInteracting = false;
 
@@ -377,10 +392,10 @@ void AT2PlayerCharacter::OnInteractCompleted()
 
 void AT2PlayerCharacter::OnInteractCanceled()
 {
-	if (!CurrentInteractItem) return;
+	if (!IsLocallyControlled()) return;
+	if (!bIsInteracting) return;
 
 	bIsInteracting = false;
-	CurrentInteractTime = 0.f;
 
 	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
 	{
@@ -466,15 +481,17 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 			}
 		}
 	}
+	if (bIsInteracting)
+	{
+		OnInteractCanceled();
+	}
 
 	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
 	{
 		PC->StopInteractUI();
 	}
 
-	Server_CancelInteract(CurrentInteractItem);
 	CurrentInteractItem = nullptr;
-
 	
 }
 
