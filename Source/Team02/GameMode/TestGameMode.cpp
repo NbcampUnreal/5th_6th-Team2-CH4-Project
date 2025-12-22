@@ -7,6 +7,15 @@
 #include "GameFramework/Controller.h"
 #include "Controller/Player/T2PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
+#include "Gimmick/Portal/PortalActor.h"
+
+void ATestGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SpawnPortalAtRandomNavLocation();
+}
 
 ATestGameMode::ATestGameMode()
 {
@@ -124,3 +133,71 @@ void ATestGameMode::OnCharacterDead(AT2PlayerController* InController)
 
 	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Alive Player Number : %d / Dead Player Number : %d"), AlivePlayerControllers.Num(), DeadPlayerControllers.Num()), true, true, FLinearColor::Green, 5.f);
 }
+
+void ATestGameMode::SpawnPortalAtRandomNavLocation()
+{
+	
+	if (!PortalClass) 
+	{
+		UE_LOG(LogTemp, Error, TEXT("PortalClass is not set!"));
+		return;
+	}
+	
+	
+	if (CurrentPortal)
+	{
+		CurrentPortal->Destroy();
+		CurrentPortal = nullptr;
+	}
+	
+
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	if (!NavSys)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Navigation System not found!"));
+		return;
+	}
+
+	FNavLocation RandomLocation;
+	if (NavSys->GetRandomReachablePointInRadius(FVector::ZeroVector, 5000.f, RandomLocation))
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		FVector SpawnPos = RandomLocation.Location + FVector(0.f, 0.f, 100.f);
+		
+		CurrentPortal = GetWorld()->SpawnActor<APortalActor>(PortalClass, SpawnPos, FRotator::ZeroRotator, SpawnParams);
+		
+		if (CurrentPortal)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Portal spawned at location: %s"), *SpawnPos.ToString());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to spawn portal!"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to find random navigation point!"));
+	}
+}
+
+/*
+void ATestGameMode::StartPortalTimer(float TimeLimit)
+{
+	if (CurrentPortal)
+	{
+		FTimerHandle PortalTimerHandle;
+		GetWorldTimerManager().SetTimer(PortalTimerHandle, [this]()
+		{
+			if (CurrentPortal)
+			{
+				CurrentPortal->SetPortalActive(false);
+				UE_LOG(LogTemp, Warning, TEXT("Portal deactivated due to time limit!"));
+			}
+		}, TimeLimit, false);
+	}
+}
+*/

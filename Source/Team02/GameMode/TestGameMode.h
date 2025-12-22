@@ -12,6 +12,9 @@ UCLASS()
 class TEAM02_API ATestGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void BeginPlay() override;
 	
 public:
 	ATestGameMode();
@@ -51,4 +54,21 @@ protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override; 
 
 	virtual void Logout(AController* Exiting) override;
+
+#pragma region Potal System
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick")
+	TSubclassOf<class APortalActor> PortalClass;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gimmick")
+	TObjectPtr<class APortalActor> CurrentPortal;
+	
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Gimmick")
+	void SpawnPortalAtRandomNavLocation();
+	
+	//void StartPortalTimer(float TimeLimit);
+
+#pragma endregion
 };
