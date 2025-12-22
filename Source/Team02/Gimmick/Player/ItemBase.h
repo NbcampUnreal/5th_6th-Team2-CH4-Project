@@ -1,0 +1,61 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "ItemBase.generated.h"
+
+class UBoxComponent;
+class AT2PlayerCharacter;
+class AT2PlayerController;
+
+UCLASS()
+class TEAM02_API AItemBase : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	AItemBase();
+
+	virtual void BeginInteract(AT2PlayerCharacter* Player);
+
+	virtual void CompleteInteract(AT2PlayerCharacter* Player);
+
+	virtual void CanelInteract(AT2PlayerCharacter* Player);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void DebugDrawCapsule();
+
+	UFUNCTION()
+	void OnRep_InteractingPC();
+
+protected:
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	virtual void OnOverlapBegin(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult);
+
+	UFUNCTION()
+	virtual void OnOverlapEnd(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex);
+
+protected:
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UBoxComponent> InteractiongBox;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UStaticMeshComponent> MeshComponent;
+
+	UPROPERTY(ReplicatedUsing=OnRep_InteractingPC)
+	TObjectPtr<AT2PlayerController> InteractingPC;
+
+};

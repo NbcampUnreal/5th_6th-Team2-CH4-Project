@@ -1,6 +1,8 @@
 #include "Controller/Player/T2PlayerController.h"
 #include "UW_SurvivorHUD.h"
 #include "T2PlayGameMod.h"
+#include "UI/UW_RoundProgressBar.h"
+#include "Components/Image.h"
 
 void AT2PlayerController::BeginPlay()
 {
@@ -58,4 +60,48 @@ void AT2PlayerController::NextSpectate()
 
 void AT2PlayerController::ShowSpectatorUI()
 {
+}
+
+void AT2PlayerController::StartInteractUI()
+{
+    if (bInteractUIActive) return;
+    if (!InteractWidgetClass) return;
+
+    InteractWidgetClassInstance = CreateWidget<UUW_RoundProgressBar>(this, InteractWidgetClass);
+
+    if (!InteractWidgetClassInstance) return;
+
+    InteractWidgetClassInstance->AddToViewport();
+    bInteractUIActive = true;
+
+    UImage* ProgressImage = Cast<UImage>(InteractWidgetClassInstance->GetWidgetFromName(TEXT("RoundPrgressImage")));
+
+    if (IsValid(ProgressImage) == true)
+    {
+        InteractMID = ProgressImage->GetDynamicMaterial();
+        InteractMID->SetScalarParameterValue(TEXT("Percent"), 0.f);
+    }
+
+}
+
+void AT2PlayerController::UpdateInteractUI(float Percent)
+{
+    if (!bInteractUIActive || !InteractMID) return;
+
+    Percent = FMath::Clamp(Percent, 0.f, 1.f);
+    InteractMID->SetScalarParameterValue(TEXT("Percent"), Percent);
+}
+
+void AT2PlayerController::StopInteractUI()
+{
+    if (!bInteractUIActive) return;
+
+    if (InteractWidgetClassInstance)
+    {
+        InteractWidgetClassInstance->RemoveFromParent();
+        InteractWidgetClassInstance = nullptr;
+    }
+
+    InteractMID = nullptr;
+    bInteractUIActive = false;
 }
