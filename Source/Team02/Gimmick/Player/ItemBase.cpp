@@ -5,6 +5,7 @@
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
 #include "Components/BoxComponent.h"
+#include "Character/KillerCharacter/T2KillerCharacter.h"
 
 AItemBase::AItemBase()
 {
@@ -20,7 +21,7 @@ AItemBase::AItemBase()
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-}
+} 
 
 void AItemBase::BeginPlay()
 {
@@ -30,6 +31,16 @@ void AItemBase::BeginPlay()
 	{
 		InteractiongBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
+	}
+
+	if (GetNetMode() == NM_Client)
+	{
+		APawn* LocalPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
+		if (LocalPawn && LocalPawn->IsA(AT2KillerCharacter::StaticClass()))
+		{
+			MeshComponent->SetVisibility(false, true);
+			InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 	}
 	
 }

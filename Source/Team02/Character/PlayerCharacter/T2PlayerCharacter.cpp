@@ -322,6 +322,27 @@ void AT2PlayerCharacter::OnDeathMontageEneded()
 
 void AT2PlayerCharacter::SetInteractableItem(AItemBase* Item)
 {
+	//FHitResult Hit;
+	//FVector Start = FirstPersonCamera->GetComponentLocation();
+	//FVector End = Start + FirstPersonCamera->GetForwardVector() * 300.f;
+
+	//bool bHit = GetWorld()->LineTraceSingleByChannel(
+	//	Hit,
+	//	Start,
+	//	End,
+	//	ECC_Visibility);
+
+	//if (bHit)
+	//{
+	//	if (Item = Cast<AItemBase>(Hit.GetActor()))
+	//	{
+	//		//if (NearbyItems.Contains(Item))
+	//		//{
+	//		//	SetFocusedItem(Item);
+	//		//	return;
+	//		//}
+	//	}
+	//}
 	CurrentInteractItem = Item;
 	//ShowInteractionUI(true);
 }
