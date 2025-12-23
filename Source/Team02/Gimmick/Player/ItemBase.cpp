@@ -71,10 +71,6 @@ void AItemBase::OnOverlapBegin(
 	{
 		Player->AddNearbyItem(this);
 	}
-
-	APawn* LocalPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
-	AT2PlayerState* PS = Cast<AT2PlayerState>(LocalPawn->GetPlayerState());
-	UE_LOG(LogTemp, Warning, TEXT("%d"), (int32)PS->PlayerRole);
 	//DebugDrawCapsule();
 }
 
