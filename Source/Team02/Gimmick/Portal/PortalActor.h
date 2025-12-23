@@ -27,24 +27,63 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UNiagaraComponent* PortalEffect;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UNiagaraComponent* LightningEffect;
+
 	UFUNCTION()
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, 
 						UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, 
 						bool bFromSweep, const FHitResult& SweepResult);
 
-	UPROPERTY(Replicated)
-	TArray<TObjectPtr<AActor>> EscapedPlayers;
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	TArray<TObjectPtr<APlayerController>> EnteredPlayers;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsActive, BlueprintReadOnly, Category = "Portal")
-	bool bIsActive;
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	bool bIsPortalActive;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
+	float PortalTimeLimit;
+
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	float RemainingTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|VFX")
+	float LightningHeight = 170.f;
+
+	FTimerHandle PortalTimerHandle;
+	FTimerHandle CountdownTimerHandle;
 
 	UFUNCTION()
-	void OnRep_IsActive();
+	void OnPortalTimeout();
+
+	UFUNCTION()
+	void UpdateCountdown();
+
+	UFUNCTION()
+	bool CheckAllPlayersEntered();
+
+	UFUNCTION()
+	void TransitionToNextLevel();
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
+	FName NextLevelName;
+
 	UFUNCTION(BlueprintCallable, Category = "Portal")
-	void SetPortalActive(bool bActive);
+	void ActivatePortal();
+
+	UFUNCTION(BlueprintCallable, Category = "Portal")
+	bool HasPlayerEntered(APlayerController* PlayerController) const;
 
 	UFUNCTION(BlueprintPure, Category = "Portal")
-	bool CanActorEscape(AActor* Actor) const;
+	float GetRemainingTime() const { return RemainingTime; }
+
+	UFUNCTION(BlueprintPure, Category = "Portal")
+	int32 GetEnteredPlayerCount() const { return EnteredPlayers.Num(); }
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_OnPortalActivated();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_OnPlayerEntered(APlayerController* PlayerController);
 };
