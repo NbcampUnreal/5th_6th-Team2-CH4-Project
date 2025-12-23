@@ -14,16 +14,24 @@ class TEAM02_API AT2GameModeBase : public AGameModeBase
 public:
     AT2GameModeBase();
 
-    // 역할 선택 화면으로 전환
+    // Start 버튼 → 로비 화면으로 전환
     UFUNCTION(BlueprintCallable, Category = "UI")
-    void TransitionToRoleSelect();
+    void TransitionToLobby();
 
-    // 역할 선택 후 게임 시작
-    UFUNCTION(BlueprintCallable, Category = "Game")
-    void StartGameAsKiller();
+    // 현재 접속 인원 수 반환
+    UFUNCTION(BlueprintCallable, Category = "Lobby")
+    int32 GetCurrentPlayerCount();
 
+    // 게임 시작 가능 여부 (3명 체크)
+    UFUNCTION(BlueprintCallable, Category = "Lobby")
+    bool CanStartGame();
+
+    // 호스트가 게임 시작 버튼 클릭 시 호출
     UFUNCTION(BlueprintCallable, Category = "Game")
-    void StartGameAsSurvivor();
+    void TryStartGame();
+
+    virtual void PostLogin(APlayerController* NewPlayer) override;
+    virtual void Logout(AController* Exiting) override;
 
     void OnPlayerDead(AT2PlayerCharacter* DeadCharacter);
 
@@ -34,12 +42,13 @@ protected:
     TSubclassOf<UUserWidget> TitleWidgetClass;
 
     UPROPERTY(EditDefaultsOnly, Category = "UI")
-    TSubclassOf<UUserWidget> RoleSelectWidgetClass;
-
+    TSubclassOf<UUserWidget> LobbyWidgetClass;
 
     UPROPERTY(EditDefaultsOnly, Category = "Game")
     FName GamePlayMapName = "Example1";
 
+    UPROPERTY(EditDefaultsOnly, Category = "Game")
+    int32 RequiredPlayers = 3;
 
     UPROPERTY(EditDefaultsOnly, Category = "Camera")
     float CameraBlendTime = 1.0f;
@@ -50,5 +59,4 @@ private:
 
     AActor* FindCameraByTag(FName Tag);
     void SwitchWidget(TSubclassOf<UUserWidget> NewWidgetClass);
-    void StartGameWithRole(EPlayerRole InRole);
 };

@@ -2,10 +2,6 @@
 #include "PlayerState/T2PlayerState.h"
 #include "UI/UW_KillerHUD.h"
 #include "Blueprint/UserWidget.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "UI/UW_RoundProgressBar.h"
-#include "Components/Image.h"
 
 AT2BaseController::AT2BaseController()
 {
@@ -14,45 +10,17 @@ AT2BaseController::AT2BaseController()
 void AT2BaseController::BeginPlay()
 {
     Super::BeginPlay();
-
-    // 로컬 플레이어만 HUD 처리
-    if (!IsLocalPlayerController())
-    {
-        return;
-    }
-
-    // PlayerState가 이미 있으면 Role 확인
-    if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
-    {
-        if (PS->PlayerRole != EPlayerRole::None)
-        {
-            UpdateHUDForRole(PS->PlayerRole);
-        }
-
-        // Role 변경 델리게이트 바인딩
-        PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
-    }
 }
 
 void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // 클라이언트에서 PlayerState가 복제되었을 때
-    if (!IsLocalPlayerController())
-    {
-        return;
-    }
-
+    // 클라이언트:  PlayerState가 복제되면 Role 확인하여 HUD 업데이트
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
-        // 델리게이트 바인딩 (아직 안 되어있다면)
-        if (!PS->OnPlayerRoleChanged.IsAlreadyBound(this, &AT2BaseController::OnPlayerRoleChanged))
-        {
-            PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
-        }
+        UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState: Role = %d"), (int32)PS->PlayerRole);
 
-        // Role이 이미 설정되어 있으면 HUD 업데이트
         if (PS->PlayerRole != EPlayerRole::None)
         {
             UpdateHUDForRole(PS->PlayerRole);
@@ -60,30 +28,62 @@ void AT2BaseController::OnRep_PlayerState()
     }
 }
 
-void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
+// ★ 추가
+void AT2BaseController::OnPossess(APawn* InPawn)
 {
+    Super::OnPossess(InPawn);
+
+    // 서버:  Possess 시점에 HUD 업데이트
     if (IsLocalPlayerController())
     {
-        UpdateHUDForRole(NewRole);
+        if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("OnPossess:  Role = %d"), (int32)PS->PlayerRole);
+
+            if (PS->PlayerRole != EPlayerRole::None)
+            {
+                UpdateHUDForRole(PS->PlayerRole);
+            }
+        }
     }
+}
+
+void AT2BaseController::SetupInputComponent()
+{
+    Super::SetupInputComponent();
 }
 
 void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
 {
-    // 이미 같은 Role이면 스킵
-    if (CurrentDisplayedRole == NewRole)
+    if (!IsLocalPlayerController())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Not local controller, skipping HUD"));
+        return;
+    }
+
+    if (NewRole == EPlayerRole::None)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role is None, skipping"));
+        return;
+    }
+
+    // 이미 같은 Role로 HUD 표시했으면 스킵
+    if (bHUDInitialized && CurrentDisplayedRole == NewRole)
     {
         return;
     }
+
+    CurrentDisplayedRole = NewRole;
+    bHUDInitialized = true;
 
     UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: %s"),
         NewRole == EPlayerRole::Killer ? TEXT("Killer") :
         NewRole == EPlayerRole::Survivor ? TEXT("Survivor") : TEXT("None"));
 
+    // 기존 HUD 숨기기
     HideAllHUD();
 
-    CurrentDisplayedRole = NewRole;
-
+    // 새 Role에 맞는 HUD 표시
     if (NewRole == EPlayerRole::Killer)
     {
         ShowKillerHUD();
@@ -98,7 +98,7 @@ void AT2BaseController::ShowKillerHUD()
 {
     if (!KillerHUDWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set!"));
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set! "));
         return;
     }
 
@@ -107,9 +107,10 @@ void AT2BaseController::ShowKillerHUD()
         KillerHUDInstance = CreateWidget<UUW_KillerHUD>(this, KillerHUDWidgetClass);
     }
 
-    if (KillerHUDInstance && !KillerHUDInstance->IsInViewport())
+    if (KillerHUDInstance)
     {
         KillerHUDInstance->AddToViewport();
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed! "));
     }
 }
 
@@ -126,9 +127,10 @@ void AT2BaseController::ShowSurvivorHUD()
         SurvivorHUDInstance = CreateWidget<UUserWidget>(this, SurvivorHUDWidgetClass);
     }
 
-    if (SurvivorHUDInstance && !SurvivorHUDInstance->IsInViewport())
+    if (SurvivorHUDInstance)
     {
         SurvivorHUDInstance->AddToViewport();
+        UE_LOG(LogTemp, Warning, TEXT("SurvivorHUD displayed!"));
     }
 }
 
@@ -145,97 +147,25 @@ void AT2BaseController::HideAllHUD()
     }
 }
 
-void AT2BaseController::SetupInputComponent()
+void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 {
-    Super::SetupInputComponent();
-
-    // ESC 키 바인딩 (Enhanced Input 사용 시)
-    // 필요하다면 여기에 IA_Settings 액션 바인딩 추가
+    UpdateHUDForRole(NewRole);
 }
 
 void AT2BaseController::ToggleSettingsMenu()
 {
-    if (!SettingsMenuWidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SettingsMenuWidgetClass is not set!"));
-        return;
-    }
-
-    if (bIsSettingsMenuOpen)
-    {
-        // 설정창 닫기
-        if (SettingsMenuInstance)
-        {
-            SettingsMenuInstance->RemoveFromParent();
-        }
-        bIsSettingsMenuOpen = false;
-
-        // 게임 입력 모드로 복귀
-        FInputModeGameOnly InputMode;
-        SetInputMode(InputMode);
-        bShowMouseCursor = false;
-    }
-    else
-    {
-        // 설정창 열기
-        if (!SettingsMenuInstance)
-        {
-            SettingsMenuInstance = CreateWidget<UUserWidget>(this, SettingsMenuWidgetClass);
-        }
-
-        if (SettingsMenuInstance)
-        {
-            SettingsMenuInstance->AddToViewport(100); // 높은 Z-Order
-        }
-        bIsSettingsMenuOpen = true;
-
-        // UI 입력 모드
-        FInputModeGameAndUI InputMode;
-        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-        SetInputMode(InputMode);
-        bShowMouseCursor = true;
-    }
 }
 
 void AT2BaseController::StartInteractUI()
 {
-    if (bInteractUIActive) return;
-    if (!InteractWidgetClass) return;
-
-    InteractWidgetClassInstance = CreateWidget<UUW_RoundProgressBar>(this, InteractWidgetClass);
-
-    if (!InteractWidgetClassInstance) return;
-
-    InteractWidgetClassInstance->AddToViewport();
     bInteractUIActive = true;
-
-    UImage* ProgressImage = Cast<UImage>(InteractWidgetClassInstance->GetWidgetFromName(TEXT("RoundProgressImage")));
-
-    if (IsValid(ProgressImage) == true)
-    {
-        InteractMID = ProgressImage->GetDynamicMaterial();
-        InteractMID->SetScalarParameterValue(TEXT("Percent"), 0.f);
-    }
 }
 
 void AT2BaseController::UpdateInteractUI(float Percent)
 {
-    if (!bInteractUIActive || !InteractMID) return;
-
-    Percent = FMath::Clamp(Percent, 0.f, 1.f);
-    InteractMID->SetScalarParameterValue(TEXT("Percent"), Percent);
 }
 
 void AT2BaseController::StopInteractUI()
 {
-    if (!bInteractUIActive) return;
-
-    if (InteractWidgetClassInstance)
-    {
-        InteractWidgetClassInstance->RemoveFromParent();
-        InteractWidgetClassInstance = nullptr;
-    }
-
-    InteractMID = nullptr;
     bInteractUIActive = false;
 }
