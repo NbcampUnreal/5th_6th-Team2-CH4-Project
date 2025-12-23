@@ -3,9 +3,8 @@
 
 #include "GameMode/TestGameMode.h"
 
-#include "PlayerState/Player/SurvivorPlayerState.h"
-#include "GameFramework/Controller.h"
 #include "Controller/T2BaseController.h"
+#include "PlayerState/T2PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
 #include "Gimmick/Portal/PortalActor.h"
@@ -19,81 +18,68 @@ void ATestGameMode::BeginPlay()
 
 ATestGameMode::ATestGameMode()
 {
-	PlayerControllerClass = APlayerController::StaticClass(); 
-	
-	PlayerStateClass = ASurvivorPlayerState::StaticClass();
-
+	PlayerControllerClass = AT2BaseController::StaticClass(); 
 	PlayerCount = 0;
 }
 
 APlayerController* ATestGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
 {
 	int32 CurrentNumPlayers = GetNumPlayers();
-	UE_LOG(LogTemp, Warning, TEXT("Current Num Players: %d"), CurrentNumPlayers);
-
-	TSubclassOf<APlayerState> OriginalPSClass = PlayerStateClass;
-	TSubclassOf<APlayerController> OriginalPCClass = PlayerControllerClass;
-
+    
 	if (CurrentNumPlayers == 0) 
 	{
-		if (TestSurvivorControllerClass)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Assigning SURVIVOR Classes"));
-			PlayerControllerClass = TestSurvivorControllerClass;
-		}
+		PlayerStateClass = TestKillerPlayerStateClass;
 	}
-	else if (CurrentNumPlayers == 1)
+	else
 	{
-		if (TestKillerControllerClass)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Assigning KILLER Classes"));
-			PlayerControllerClass = TestKillerControllerClass;
-
-			if (TestKillerPlayerStateClass) 
-			{
-				PlayerStateClass = TestKillerPlayerStateClass; 
-			}
-		}
+		PlayerStateClass = TestSurvivorPlayerStateClass;
 	}
 
-	APlayerController* NewPC = Super::SpawnPlayerController(InRemoteRole, Options);
-    
-	PlayerControllerClass = OriginalPCClass;
-	PlayerStateClass = OriginalPSClass;
-
-	return NewPC;
+	return Super::SpawnPlayerController(InRemoteRole, Options);
 }
 
 UClass* ATestGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
-
-	if (InController && TestSurvivorControllerClass && InController->IsA(TestSurvivorControllerClass))
+	if (AT2PlayerState* PS = InController->GetPlayerState<AT2PlayerState>())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Controller is Survivor Type. Assigning Survivor Pawn."));
-		return TestSurvivorPawnClass;
+		if (PS->PlayerRole == EPlayerRole::Survivor)
+		{
+			return TestSurvivorPawnClass;
+		}
+		else if (PS->PlayerRole == EPlayerRole::Killer)
+		{
+			return TestKillerPawnClass;
+		}
 	}
 
-	if (InController && TestKillerControllerClass && InController->IsA(TestKillerControllerClass))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Controller is Killer Type. Assigning Killer Pawn."));
-		return TestKillerPawnClass;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Unknown Controller Type. Using Super implementation."));
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
 
 void ATestGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	Super::PostLogin(NewPlayer);
-
-	PlayerCount++;
-
-	AT2BaseController* NewPlayerController = Cast<AT2BaseController>(NewPlayer);
-	if (IsValid(NewPlayerController) == true)
+	if (AT2PlayerState* PS = NewPlayer->GetPlayerState<AT2PlayerState>())
 	{
-		AlivePlayerControllers.Add(NewPlayerController);
+		int32 PlayerIdx = GetNumPlayers() - 1;
+		EPlayerRole AssignedRole = (PlayerIdx == 0) ? EPlayerRole::Killer : EPlayerRole::Survivor;
+        
+		PS->PlayerRole = AssignedRole; 
+        
+		UE_LOG(LogTemp, Warning, TEXT("Player %d assigned role: %d"), PlayerIdx, (int32)AssignedRole);
 	}
+
+	Super::PostLogin(NewPlayer);
+    
+	if (AT2BaseController* BC = Cast<AT2BaseController>(NewPlayer))
+	{
+		AlivePlayerControllers.Add(BC);
+        
+		if (BC->IsLocalPlayerController())
+		{
+			BC->UpdateHUDForRole(BC->GetPlayerState<AT2PlayerState>()->PlayerRole);
+		}
+	}
+    
+	PlayerCount++;
 }
 
 void ATestGameMode::Logout(AController* Exiting)
