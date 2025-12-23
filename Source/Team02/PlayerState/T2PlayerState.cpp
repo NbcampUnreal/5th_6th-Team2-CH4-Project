@@ -3,6 +3,7 @@
 
 AT2PlayerState::AT2PlayerState()
 {
+    bReplicates = true;
 }
 
 void AT2PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -23,4 +24,5 @@ void AT2PlayerState::SetPlayerRole(EPlayerRole NewRole)
 void AT2PlayerState::OnRep_PlayerRole()
 {
     OnPlayerRoleChanged.Broadcast(PlayerRole);
+
 }

@@ -125,7 +125,6 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 		return;
 	}
 
-	OnHPChanged.Broadcast(CurrentHP, MaxHP);
 	UE_LOG(LogTemp, Warning, TEXT("Server Broadcast - HP: %f / %f"), CurrentHP, MaxHP);
 
 	AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(GetPawn());
@@ -145,6 +144,14 @@ void ASurvivorPlayerState::ApplyDamage(float DamageAmount)
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
+}
+
+void ASurvivorPlayerState::ApplyHealByItem(float HealAmount)
+{
+	if (!HasAuthority()) return;
+
+	CurrentHP = FMath::Clamp(CurrentHP + HealAmount, 100.f, MaxHP);
+
 }
 
 void ASurvivorPlayerState::SetEscaped()
