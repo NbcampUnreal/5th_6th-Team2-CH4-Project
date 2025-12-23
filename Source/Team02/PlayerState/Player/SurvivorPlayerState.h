@@ -24,6 +24,8 @@ public:
     FOnHPChanged OnHPChanged;
 
     void ApplyDamage(float DamageAmount);
+    
+    void ApplyHealByItem(float HealAmount);
 
     UPROPERTY(ReplicatedUsing = OnRep_IsDead, BlueprintReadOnly, Category = "Status")
     bool bIsDead = false;
