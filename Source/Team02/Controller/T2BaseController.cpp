@@ -16,10 +16,35 @@ void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // PlayerState가 복제되면 Role 확인하여 HUD 업데이트
+    // 클라이언트:  PlayerState가 복제되면 Role 확인하여 HUD 업데이트
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
-        UpdateHUDForRole(PS->PlayerRole);
+        UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState: Role = %d"), (int32)PS->PlayerRole);
+
+        if (PS->PlayerRole != EPlayerRole::None)
+        {
+            UpdateHUDForRole(PS->PlayerRole);
+        }
+    }
+}
+
+// ★ 추가
+void AT2BaseController::OnPossess(APawn* InPawn)
+{
+    Super::OnPossess(InPawn);
+
+    // 서버:  Possess 시점에 HUD 업데이트
+    if (IsLocalPlayerController())
+    {
+        if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("OnPossess:  Role = %d"), (int32)PS->PlayerRole);
+
+            if (PS->PlayerRole != EPlayerRole::None)
+            {
+                UpdateHUDForRole(PS->PlayerRole);
+            }
+        }
     }
 }
 
@@ -30,20 +55,26 @@ void AT2BaseController::SetupInputComponent()
 
 void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
 {
-    // ★★★ 로컬 플레이어만 HUD 표시 ★★★
     if (!IsLocalPlayerController())
     {
         UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Not local controller, skipping HUD"));
         return;
     }
 
-    // 이미 같은 Role이면 스킵
-    if (CurrentDisplayedRole == NewRole)
+    if (NewRole == EPlayerRole::None)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role is None, skipping"));
+        return;
+    }
+
+    // 이미 같은 Role로 HUD 표시했으면 스킵
+    if (bHUDInitialized && CurrentDisplayedRole == NewRole)
     {
         return;
     }
 
     CurrentDisplayedRole = NewRole;
+    bHUDInitialized = true;
 
     UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: %s"),
         NewRole == EPlayerRole::Killer ? TEXT("Killer") :
@@ -67,7 +98,7 @@ void AT2BaseController::ShowKillerHUD()
 {
     if (!KillerHUDWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set!"));
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set! "));
         return;
     }
 
@@ -79,7 +110,7 @@ void AT2BaseController::ShowKillerHUD()
     if (KillerHUDInstance)
     {
         KillerHUDInstance->AddToViewport();
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed!"));
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed! "));
     }
 }
 
@@ -123,22 +154,18 @@ void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 
 void AT2BaseController::ToggleSettingsMenu()
 {
-    // ESC 설정창 - 나중에 구현
 }
 
 void AT2BaseController::StartInteractUI()
 {
-    // InteractUI - 나중에 구현
     bInteractUIActive = true;
 }
 
 void AT2BaseController::UpdateInteractUI(float Percent)
 {
-    // InteractUI 업데이트 - 나중에 구현
 }
 
 void AT2BaseController::StopInteractUI()
 {
-    // InteractUI 종료 - 나중에 구현
     bInteractUIActive = false;
 }

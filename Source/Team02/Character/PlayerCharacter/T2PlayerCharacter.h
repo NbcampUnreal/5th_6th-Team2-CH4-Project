@@ -121,7 +121,6 @@ protected:
 
 	FTimerHandle InteractTraceTimer;
 
-
 #pragma region TEST
 public:
 
