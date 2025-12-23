@@ -2,10 +2,18 @@
 #include "UW_SurvivorHUD.h"
 #include "T2PlayGameMod.h"
 
+/*
+ * ========================================
+ * 컨트롤러 통합 작업 중 - 주석 처리됨
+ * 역할: AT2BaseController로 통합 예정
+ * ========================================
+ */
+
 void AT2PlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
+    /*
     UE_LOG(LogTemp, Error, TEXT("=== T2PlayerController BeginPlay ==="));
     UE_LOG(LogTemp, Error, TEXT("IsLocal:  %s, HasAuthority: %s"),
         IsLocalPlayerController() ? TEXT("YES") : TEXT("NO"),
@@ -16,10 +24,12 @@ void AT2PlayerController::BeginPlay()
         UE_LOG(LogTemp, Error, TEXT("Creating HUD..."));
         ShowSurvivorHUD();
     }
+    */
 }
 
 void AT2PlayerController::ShowSurvivorHUD()
 {
+    /*
     UE_LOG(LogTemp, Error, TEXT("=== ShowSurvivorHUD ==="));
 
     if (!SurvivorHUDWidgetClass)
@@ -41,15 +51,18 @@ void AT2PlayerController::ShowSurvivorHUD()
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create widget"));
     }
+    */
 }
 
 void AT2PlayerController::StartSpectate(AActor* Target)
 {
+    /*
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
     ChangeState(NAME_Spectating);
     SetViewTargetWithBlend(Target, 0.5f);
     ShowSpectatorUI();
+    */
 }
 
 void AT2PlayerController::NextSpectate()

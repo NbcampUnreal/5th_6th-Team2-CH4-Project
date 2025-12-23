@@ -14,30 +14,14 @@ void AT2PlayGameMod::BeginPlay()
 
 APlayerController* AT2PlayGameMod::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
+
     EPlayerRole AssignedRole = AssignRoleForNewPlayer(Options);
     PendingRole = AssignedRole;
 
-    TSubclassOf<APlayerController> ControllerClassToUse = nullptr;
 
-    if (AssignedRole == EPlayerRole::Killer && KillerControllerClass)
-    {
-        ControllerClassToUse = KillerControllerClass;
-    }
-    else if (AssignedRole == EPlayerRole::Survivor && SurvivorControllerClass)
-    {
-        ControllerClassToUse = SurvivorControllerClass;
-    }
-    else
-    {
-        ControllerClassToUse = PlayerControllerClass;
-    }
-
-    TSubclassOf<APlayerController> OriginalClass = PlayerControllerClass;
-    PlayerControllerClass = ControllerClassToUse;
 
     APlayerController* NewController = Super::Login(NewPlayer, InRemoteRole, Portal, Options, UniqueId, ErrorMessage);
 
-    PlayerControllerClass = OriginalClass;
     PendingRole = EPlayerRole::None;
 
     if (NewController)
@@ -47,7 +31,6 @@ APlayerController* AT2PlayGameMod::Login(UPlayer* NewPlayer, ENetRole InRemoteRo
 
     return NewController;
 }
-
 
 EPlayerRole AT2PlayGameMod::AssignRoleForNewPlayer(const FString& Options)
 {
