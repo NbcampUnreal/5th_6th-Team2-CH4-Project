@@ -17,7 +17,7 @@ UCLASS()
 class TEAM02_API AT2PlayerCharacter : public AT2BaseCharacter
 {
 	GENERATED_BODY()
-	
+
 public:
 	AT2PlayerCharacter();
 
@@ -40,7 +40,7 @@ public:
 
 	void HandleHPChanged(float CurrentHP, float MaxHP);
 
-	float TakeDamage(float DamageAmount,FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	void OnDeath();
 
@@ -78,7 +78,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UCameraComponent> ThirdPersonCamera;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
 
@@ -120,6 +120,12 @@ protected:
 	bool bIsInteracting = false;
 
 	FTimerHandle InteractTraceTimer;
+
+	// ★ 추가:  사망 상태 플래그 (중복 호출 방지)
+	bool bIsDead = false;
+
+	// ★ 추가: 사망 후 시체 제거
+	void DestroyAfterDeath();
 
 #pragma region TEST
 public:

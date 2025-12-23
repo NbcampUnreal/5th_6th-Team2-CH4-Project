@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "UI/UW_RoundProgressBar.h"
 #include "Components/Image.h"
+#include "Kismet/GameplayStatics.h"
 
 AT2BaseController::AT2BaseController()
 {
@@ -12,13 +13,21 @@ AT2BaseController::AT2BaseController()
 void AT2BaseController::BeginPlay()
 {
     Super::BeginPlay();
+
+    // 서버:  BeginPlay에서 델리게이트 바인딩 시도
+    if (HasAuthority() && IsLocalPlayerController())
+    {
+        BindRoleChangedDelegate();
+    }
 }
 
 void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // 클라이언트:  PlayerState가 복제되면 Role 확인하여 HUD 업데이트
+    // 클라이언트: PlayerState가 복제되면 델리게이트 바인딩
+    BindRoleChangedDelegate();
+
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
         UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState: Role = %d"), (int32)PS->PlayerRole);
@@ -30,17 +39,17 @@ void AT2BaseController::OnRep_PlayerState()
     }
 }
 
-// ★ 추가
 void AT2BaseController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
-    // 서버:  Possess 시점에 HUD 업데이트
     if (IsLocalPlayerController())
     {
+        BindRoleChangedDelegate();
+
         if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
         {
-            UE_LOG(LogTemp, Warning, TEXT("OnPossess:  Role = %d"), (int32)PS->PlayerRole);
+            UE_LOG(LogTemp, Warning, TEXT("OnPossess: Role = %d"), (int32)PS->PlayerRole);
 
             if (PS->PlayerRole != EPlayerRole::None)
             {
@@ -50,42 +59,40 @@ void AT2BaseController::OnPossess(APawn* InPawn)
     }
 }
 
+void AT2BaseController::BindRoleChangedDelegate()
+{
+    if (bDelegateBound) return;
+
+    if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
+    {
+        PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
+        bDelegateBound = true;
+        UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate:  Delegate bound! "));
+    }
+}
+
 void AT2BaseController::SetupInputComponent()
 {
     Super::SetupInputComponent();
+
+    // ★ ESC 키 바인딩
+    InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AT2BaseController::ToggleSettingsMenu);
 }
 
 void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
 {
-    if (!IsLocalPlayerController())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Not local controller, skipping HUD"));
-        return;
-    }
-
-    if (NewRole == EPlayerRole::None)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role is None, skipping"));
-        return;
-    }
-
-    // 이미 같은 Role로 HUD 표시했으면 스킵
-    if (bHUDInitialized && CurrentDisplayedRole == NewRole)
-    {
-        return;
-    }
+    if (!IsLocalPlayerController()) return;
+    if (NewRole == EPlayerRole::None) return;
+    if (bHUDInitialized && CurrentDisplayedRole == NewRole) return;
 
     CurrentDisplayedRole = NewRole;
     bHUDInitialized = true;
 
     UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: %s"),
-        NewRole == EPlayerRole::Killer ? TEXT("Killer") :
-        NewRole == EPlayerRole::Survivor ? TEXT("Survivor") : TEXT("None"));
+        NewRole == EPlayerRole::Killer ? TEXT("Killer") : TEXT("Survivor"));
 
-    // 기존 HUD 숨기기
     HideAllHUD();
 
-    // 새 Role에 맞는 HUD 표시
     if (NewRole == EPlayerRole::Killer)
     {
         ShowKillerHUD();
@@ -100,7 +107,7 @@ void AT2BaseController::ShowKillerHUD()
 {
     if (!KillerHUDWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set! "));
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set!"));
         return;
     }
 
@@ -112,7 +119,7 @@ void AT2BaseController::ShowKillerHUD()
     if (KillerHUDInstance)
     {
         KillerHUDInstance->AddToViewport();
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed! "));
+        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed!"));
     }
 }
 
@@ -132,7 +139,7 @@ void AT2BaseController::ShowSurvivorHUD()
     if (SurvivorHUDInstance)
     {
         SurvivorHUDInstance->AddToViewport();
-        UE_LOG(LogTemp, Warning, TEXT("SurvivorHUD displayed!"));
+        UE_LOG(LogTemp, Warning, TEXT("SurvivorHUD displayed! "));
     }
 }
 
@@ -151,11 +158,91 @@ void AT2BaseController::HideAllHUD()
 
 void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 {
+    UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged Delegate Called!  Role: %d"), (int32)NewRole);
     UpdateHUDForRole(NewRole);
 }
 
+// ★★★ ESC 설정창 토글 ★★★
 void AT2BaseController::ToggleSettingsMenu()
 {
+    UE_LOG(LogTemp, Warning, TEXT("ESC Pressed - ToggleSettingsMenu"));
+
+    if (!IsLocalPlayerController()) return;
+
+    if (bIsSettingsMenuOpen)
+    {
+        CloseSettingsMenu();
+    }
+    else
+    {
+        OpenSettingsMenu();
+    }
+}
+
+// ★★★ 설정창 열기 ★★★
+void AT2BaseController::OpenSettingsMenu()
+{
+    if (!SettingsMenuWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SettingsMenuWidgetClass is not set!"));
+        return;
+    }
+
+    if (!SettingsMenuInstance)
+    {
+        SettingsMenuInstance = CreateWidget<UUserWidget>(this, SettingsMenuWidgetClass);
+    }
+
+    if (SettingsMenuInstance)
+    {
+        SettingsMenuInstance->AddToViewport(100);
+        bIsSettingsMenuOpen = true;
+
+        // 마우스 커서 표시 + UI 입력 모드 (게임은 멈추지 않음)
+        FInputModeGameAndUI InputMode;
+        InputMode.SetWidgetToFocus(SettingsMenuInstance->TakeWidget());
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        SetInputMode(InputMode);
+        bShowMouseCursor = true;
+
+        UE_LOG(LogTemp, Warning, TEXT("Settings Menu Opened!"));
+    }
+}
+
+// ★★★ 설정창 닫기 ★★★
+void AT2BaseController::CloseSettingsMenu()
+{
+    if (SettingsMenuInstance && SettingsMenuInstance->IsInViewport())
+    {
+        SettingsMenuInstance->RemoveFromParent();
+    }
+
+    bIsSettingsMenuOpen = false;
+
+    // 게임 입력 모드로 복귀
+    FInputModeGameOnly InputMode;
+    SetInputMode(InputMode);
+    bShowMouseCursor = false;
+
+    UE_LOG(LogTemp, Warning, TEXT("Settings Menu Closed!"));
+}
+
+// ★★★ 게임 나가기 (블루프린트에서 버튼에 연결) ★★★
+void AT2BaseController::RequestLeaveGame()
+{
+    UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame called! "));
+
+    // 서버(호스트)인 경우 - 나가면 모두 튕김
+    if (HasAuthority() && GetNetMode() == NM_ListenServer)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Server is leaving - all players will disconnect"));
+    }
+
+    // 로비/타이틀로 이동
+    if (UWorld* World = GetWorld())
+    {
+        UGameplayStatics::OpenLevel(World, TEXT("/Game/Library_Pack/Maps/Example"));
+    }
 }
 
 void AT2BaseController::StartInteractUI()
