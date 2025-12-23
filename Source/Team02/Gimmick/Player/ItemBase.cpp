@@ -1,7 +1,7 @@
 #include "Gimmick/Player/ItemBase.h"
 #include "Components/CapsuleComponent.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
-#include "Controller/Player/T2PlayerController.h"
+#include "Controller/T2BaseController.h"
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
 #include "Components/BoxComponent.h"
@@ -77,7 +77,7 @@ void AItemBase::OnOverlapEnd(
 {
 	if (AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(OtherActor))
 	{
-		if (AT2PlayerController* PC = Cast<AT2PlayerController>(Player->GetController()))
+		if (AT2BaseController* PC = Cast<AT2BaseController>(Player->GetController()))
 		{
 			Player->RemoveNearbyItem(this);
 			PC->StopInteractUI();
@@ -93,7 +93,7 @@ void AItemBase::BeginInteract(AT2PlayerCharacter* Player)
 
 	if (InteractingPC != nullptr) return;
 
-	AT2PlayerController* PC = Cast<AT2PlayerController>(Player->GetController());
+	AT2BaseController* PC = Cast<AT2BaseController>(Player->GetController());
 	if (IsValid(PC) == true)
 	{
 		InteractingPC = PC;

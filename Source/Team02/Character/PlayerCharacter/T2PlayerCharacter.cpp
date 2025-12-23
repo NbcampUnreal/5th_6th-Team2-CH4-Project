@@ -81,11 +81,11 @@ void AT2PlayerCharacter::Tick(float DeltaTime)
 
 	CurrentInteractTime += DeltaTime;
 
-	float Persent = CurrentInteractTime / RequiredInteractTime;
+	float Percent = CurrentInteractTime / RequiredInteractTime;
 
-	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
-		PC->UpdateInteractUI(Persent);
+		PC->UpdateInteractUI(Percent);
 	}
 }
 
@@ -107,7 +107,7 @@ void AT2PlayerCharacter::BeginPlay()
 
 	if (IsLocallyControlled())
 	{
-		if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+		if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 		{
 			if (UEnhancedInputLocalPlayerSubsystem* EILPS = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 			{
@@ -237,11 +237,11 @@ void AT2PlayerCharacter::OnDeath()
 		ATestGameMode* GM = GetWorld()->GetAuthGameMode<ATestGameMode>();
 		if (IsValid(GM) == true)
 		{
-			AT2PlayerController* PC = Cast<AT2PlayerController>(GetOwner());
+			AT2BaseController* PC = Cast<AT2BaseController>(GetOwner());
 			{
 				if (IsValid(PC) == true)
 				{
-					GM->OnCharacterDead(PC);
+					// GM->OnCharacterDead(PC);   When Player Died, Notice to GameMode 
 				}
 			}
 		}
@@ -365,7 +365,7 @@ void AT2PlayerCharacter::OnInteractStart()
 	bIsInteracting = true;
 	CurrentInteractTime = 0.f;
 
-	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
 		PC->StartInteractUI();
 	}
@@ -382,7 +382,7 @@ void AT2PlayerCharacter::OnInteractCompleted()
 
 	bIsInteracting = false;
 
-	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
 		PC->StopInteractUI();
 	}
@@ -397,7 +397,7 @@ void AT2PlayerCharacter::OnInteractCanceled()
 
 	bIsInteracting = false;
 
-	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
 		PC->StopInteractUI();
 	}
@@ -486,7 +486,7 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 		OnInteractCanceled();
 	}
 
-	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
 		PC->StopInteractUI();
 	}

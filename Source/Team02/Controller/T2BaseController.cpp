@@ -4,6 +4,8 @@
 #include "Blueprint/UserWidget.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "UI/UW_RoundProgressBar.h"
+#include "Components/Image.h"
 
 AT2BaseController::AT2BaseController()
 {
@@ -193,4 +195,47 @@ void AT2BaseController::ToggleSettingsMenu()
         SetInputMode(InputMode);
         bShowMouseCursor = true;
     }
+}
+
+void AT2BaseController::StartInteractUI()
+{
+    if (bInteractUIActive) return;
+    if (!InteractWidgetClass) return;
+
+    InteractWidgetClassInstance = CreateWidget<UUW_RoundProgressBar>(this, InteractWidgetClass);
+
+    if (!InteractWidgetClassInstance) return;
+
+    InteractWidgetClassInstance->AddToViewport();
+    bInteractUIActive = true;
+
+    UImage* ProgressImage = Cast<UImage>(InteractWidgetClassInstance->GetWidgetFromName(TEXT("RoundProgressImage")));
+
+    if (IsValid(ProgressImage) == true)
+    {
+        InteractMID = ProgressImage->GetDynamicMaterial();
+        InteractMID->SetScalarParameterValue(TEXT("Percent"), 0.f);
+    }
+}
+
+void AT2BaseController::UpdateInteractUI(float Percent)
+{
+    if (!bInteractUIActive || !InteractMID) return;
+
+    Percent = FMath::Clamp(Percent, 0.f, 1.f);
+    InteractMID->SetScalarParameterValue(TEXT("Percent"), Percent);
+}
+
+void AT2BaseController::StopInteractUI()
+{
+    if (!bInteractUIActive) return;
+
+    if (InteractWidgetClassInstance)
+    {
+        InteractWidgetClassInstance->RemoveFromParent();
+        InteractWidgetClassInstance = nullptr;
+    }
+
+    InteractMID = nullptr;
+    bInteractUIActive = false;
 }

@@ -6,7 +6,7 @@
 
 class UBoxComponent;
 class AT2PlayerCharacter;
-class AT2PlayerController;
+class AT2BaseController;
 
 UCLASS()
 class TEAM02_API AItemBase : public AActor
@@ -56,6 +56,6 @@ protected:
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UPROPERTY(ReplicatedUsing=OnRep_InteractingPC)
-	TObjectPtr<AT2PlayerController> InteractingPC;
+	TObjectPtr<AT2BaseController> InteractingPC;
 
 };

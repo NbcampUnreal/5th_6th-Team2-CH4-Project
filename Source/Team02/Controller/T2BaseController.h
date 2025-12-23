@@ -8,6 +8,7 @@
 class UUserWidget;
 class UUW_KillerHUD;
 class UUW_SurvivorHUD;
+class UUW_RoundProgressBar;
 
 UCLASS()
 class TEAM02_API AT2BaseController : public APlayerController
@@ -27,6 +28,12 @@ public:
     // ESC 설정창 토글
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ToggleSettingsMenu();
+
+    void StartInteractUI();
+    void UpdateInteractUI(float Percent);
+    void StopInteractUI();
+
+    bool bInteractUIActive = false;
 
 protected:
     virtual void SetupInputComponent() override;
@@ -54,6 +61,17 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Settings")
     bool bIsSettingsMenuOpen = false;
+
+public:
+    UPROPERTY(EditDefaultsOnly, Category = "UI|Survivor")
+    TSubclassOf<UUW_RoundProgressBar> InteractWidgetClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI|Survivor")
+    TObjectPtr<UUW_RoundProgressBar> InteractWidgetClassInstance;
+
+    UPROPERTY()
+    UMaterialInstanceDynamic* InteractMID;
+
 
 private:
     void ShowKillerHUD();
