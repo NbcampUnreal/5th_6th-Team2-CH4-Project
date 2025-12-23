@@ -6,6 +6,7 @@
 #include "DrawDebugHelpers.h"
 #include "Components/BoxComponent.h"
 #include "Character/KillerCharacter/T2KillerCharacter.h"
+#include "PlayerState/T2PlayerState.h"
 
 AItemBase::AItemBase()
 {
@@ -33,16 +34,22 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
 
-	if (GetNetMode() == NM_Client)
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
-		APawn* LocalPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
-		if (LocalPawn && LocalPawn->IsA(AT2KillerCharacter::StaticClass()))
+		if (PC->IsLocalController())
 		{
-			MeshComponent->SetVisibility(false, true);
-			InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			APawn* Pawn = PC->GetPawn();
+			if (Pawn)
+			{
+				AT2PlayerState* PS = Pawn->GetPlayerState<AT2PlayerState>();
+				if (PS && PS->PlayerRole == EPlayerRole::Killer)
+				{
+					MeshComponent->SetVisibility(false, true);
+					InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				}
+			}
 		}
 	}
-	
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -65,7 +72,9 @@ void AItemBase::OnOverlapBegin(
 		Player->AddNearbyItem(this);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("OverlapBegin"));
+	APawn* LocalPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
+	AT2PlayerState* PS = Cast<AT2PlayerState>(LocalPawn->GetPlayerState());
+	UE_LOG(LogTemp, Warning, TEXT("%d"), (int32)PS->PlayerRole);
 	//DebugDrawCapsule();
 }
 

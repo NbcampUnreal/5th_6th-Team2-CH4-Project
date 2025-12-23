@@ -1,4 +1,5 @@
 #include "Gimmick/Player/FlashlightBattery.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 
 AFlashlightBattery::AFlashlightBattery()
 {
@@ -8,6 +9,7 @@ AFlashlightBattery::AFlashlightBattery()
 
 void AFlashlightBattery::UseBattery()
 {
+
 }
 
 void AFlashlightBattery::BeginPlay()

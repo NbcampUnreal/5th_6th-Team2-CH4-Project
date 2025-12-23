@@ -21,6 +21,9 @@ public:
     virtual void BeginPlay() override;
     virtual void OnRep_PlayerState() override;
 
+    // ★ 추가
+    virtual void OnPossess(APawn* InPawn) override;
+
     // Role에 따라 HUD를 표시/전환
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateHUDForRole(EPlayerRole NewRole);
@@ -84,4 +87,7 @@ private:
 
     // 현재 적용된 Role 캐시
     EPlayerRole CurrentDisplayedRole = EPlayerRole::None;
+
+    // ★ 추가
+    bool bHUDInitialized = false;
 };

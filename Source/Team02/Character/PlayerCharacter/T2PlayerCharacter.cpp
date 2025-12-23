@@ -18,6 +18,7 @@
 #include "GameFramework/Controller.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/UW_RoundProgressBar.h"
+#include "Controller/T2BaseController.h"
 #include "Team02.h"
 
 

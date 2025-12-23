@@ -19,31 +19,34 @@ class TEAM02_API AT2BaseCharacter : public ACharacter
 public:
 	AT2BaseCharacter();
 
+	// ★ 추가
+	virtual void PossessedBy(AController* NewController) override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-public:	
+public:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
 
 	// InputAction
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> LookAction;
-	
+
 	void HandleMoveInput(const FInputActionValue& InValue);
-	
+
 	void HandleLookInput(const FInputActionValue& InValue);
 
 #pragma region PlayMontage
-	
+
 public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayHitMontage();
@@ -57,4 +60,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> DeathMontage;
 
+#pragma endregion
+
+private:
+	// ★ 추가
+	void SetupBaseEnhancedInput();
 };

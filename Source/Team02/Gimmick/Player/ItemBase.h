@@ -24,6 +24,8 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	//virtual void UseItem();
+
 	void DebugDrawCapsule();
 
 	UFUNCTION()
