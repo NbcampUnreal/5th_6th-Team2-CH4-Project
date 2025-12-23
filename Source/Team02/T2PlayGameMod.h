@@ -38,11 +38,6 @@ protected:
     TSubclassOf<APawn> SurvivorClass;
 
 
-    UPROPERTY(EditDefaultsOnly, Category = "Controllers")
-    TSubclassOf<APlayerController> KillerControllerClass;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Controllers")
-    TSubclassOf<APlayerController> SurvivorControllerClass;
 
 private:
     //  최대 인원은 유지 
