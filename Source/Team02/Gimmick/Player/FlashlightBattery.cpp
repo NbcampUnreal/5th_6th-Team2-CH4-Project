@@ -6,10 +6,15 @@ AFlashlightBattery::AFlashlightBattery()
 
 }
 
+void AFlashlightBattery::UseBattery()
+{
+}
+
 void AFlashlightBattery::BeginPlay()
 {
 	Super::BeginPlay();
 	
 }
+
 
 
