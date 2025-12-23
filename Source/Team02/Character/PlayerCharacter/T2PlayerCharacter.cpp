@@ -14,6 +14,11 @@
 #include "Net/UnrealNetwork.h"
 #include "GameMode/T2GameModeBase.h"
 #include "GameMode/TestGameMode.h"
+#include "Gimmick/Player/ItemBase.h"
+#include "GameFramework/Controller.h"
+#include "Blueprint/UserWidget.h"
+#include "UI/UW_RoundProgressBar.h"
+#include "Team02.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -68,13 +73,41 @@ AT2PlayerCharacter::AT2PlayerCharacter()
 
 }
 
+void AT2PlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	
+	if (!bIsInteracting) return;
+
+	CurrentInteractTime += DeltaTime;
+
+	float Persent = CurrentInteractTime / RequiredInteractTime;
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->UpdateInteractUI(Persent);
+	}
+}
+
+void AT2PlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AT2PlayerCharacter, bIsInteracting);
+}
+
 void AT2PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	FirstPersonCamera->SetActive(true);
+	ThirdPersonCamera->SetActive(false);
+	GetMesh()->SetOwnerNoSee(true);
+	FlashlightMesh->SetOwnerNoSee(true);
+
 	if (IsLocallyControlled())
 	{
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
 		{
 			if (UEnhancedInputLocalPlayerSubsystem* EILPS = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 			{
@@ -87,6 +120,14 @@ void AT2PlayerCharacter::BeginPlay()
 		GetMesh(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		FName("hand_rSocket")
+	);
+
+	GetWorldTimerManager().SetTimer(
+		InteractTraceTimer,
+		this,
+		&AT2PlayerCharacter::UpdateInteractTarget,
+		0.05f,
+		true
 	);
 }
 
@@ -105,6 +146,9 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	{
 		EIC->BindAction(CrouchInput, ETriggerEvent::Started, this, &ThisClass::HandleCrouchInput);
 		EIC->BindAction(ViewModeInput, ETriggerEvent::Started, this, &ThisClass::HandleViewModeInput);
+		EIC->BindAction(InteractInput, ETriggerEvent::Started, this, &ThisClass::OnInteractStart);
+		EIC->BindAction(InteractInput, ETriggerEvent::Completed, this, &ThisClass::OnInteractCompleted);
+		EIC->BindAction(InteractInput, ETriggerEvent::Canceled, this, &ThisClass::OnInteractCanceled);
 	}
 
 }
@@ -251,50 +295,40 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 	//FirstPerson
 	if (bIsFirstPerson)
 	{
-		// ī�޶� Ȱ��ȭ
 		FirstPersonCamera->SetActive(true);
 		ThirdPersonCamera->SetActive(false);
 
-		// �þ߿��� �� �����
 		GetMesh()->SetOwnerNoSee(true);
 		FirstPersonArms->SetOwnerNoSee(false);
-		FirstPersonArms->SetVisibility(true, true);
+		FirstPersonArms->SetVisibility(false, true);
 
 		FlashlightMesh->SetOwnerNoSee(true);
 
-		// ��Ʈ�ѷ� ȸ�� �� ī�޶� ȸ��
 		bUseControllerRotationYaw = true;
 		bUseControllerRotationPitch = true;
 
-		// �̵� ���� ���� ���� (ĳ���ʹ� ���콺 ȸ���� ���� ���� ȸ��)
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 		GetCharacterMovement()->RotationRate = FRotator(0, 500, 0);
 
-		// spring arm ��Ȱ��ȭ
 		SpringArmComponent->bUsePawnControlRotation = false;
 	}
 	//ThirdPerson
 	else
 	{
-		// ī�޶� Ȱ��ȭ
 		ThirdPersonCamera->SetActive(true);
 		FirstPersonCamera->SetActive(false);
 
-		// ĳ���� Ǯ�ٵ� �ٽ� ���̰�
 		GetMesh()->SetOwnerNoSee(false);
 		FirstPersonArms->SetOwnerNoSee(true);
 		FirstPersonArms->SetVisibility(false, true);
 
 		FlashlightMesh->SetOwnerNoSee(false);
 
-		// ���콺 �������� �������� ȸ���� �����ϵ���
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationPitch = false;
 
-		// �̵� ������ �������� ĳ���� ȸ��
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		// ���������� ��Ʈ�ѷ� ȸ���� ���󰡰�
 		SpringArmComponent->bUsePawnControlRotation = true;
 	}
 }
@@ -306,3 +340,158 @@ void AT2PlayerCharacter::OnDeathMontageEneded()
 	DetachFromControllerPendingDestroy();
 	Destroy();
 }
+
+void AT2PlayerCharacter::SetInteractableItem(AItemBase* Item)
+{
+	CurrentInteractItem = Item;
+	//ShowInteractionUI(true);
+}
+
+void AT2PlayerCharacter::ClearInteractableItem(AItemBase* Item)
+{
+	if (CurrentInteractItem == Item)
+	{
+		CurrentInteractItem = nullptr;
+		//ShowInteractionUI(false);
+	}
+}
+
+void AT2PlayerCharacter::OnInteractStart()
+{
+	if (!IsLocallyControlled()) return;
+	if (!CurrentInteractItem) return;
+	if (bIsInteracting) return;
+
+	bIsInteracting = true;
+	CurrentInteractTime = 0.f;
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->StartInteractUI();
+	}
+
+
+	Server_BeginInteract(CurrentInteractItem);
+	//StartInteractProgressUI();    상호작용체크/UI게이지 시작
+}
+
+void AT2PlayerCharacter::OnInteractCompleted()
+{
+	if (!IsLocallyControlled()) return;
+	if (!bIsInteracting) return;
+
+	bIsInteracting = false;
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->StopInteractUI();
+	}
+
+	Server_CompleteInteract(CurrentInteractItem);    //서버RPC호출 /실제 아이템 획득 요청
+}
+
+void AT2PlayerCharacter::OnInteractCanceled()
+{
+	if (!IsLocallyControlled()) return;
+	if (!bIsInteracting) return;
+
+	bIsInteracting = false;
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->StopInteractUI();
+	}
+
+	Server_CancelInteract(CurrentInteractItem);
+	 // 타이머중지
+}
+
+void AT2PlayerCharacter::Server_BeginInteract_Implementation(AItemBase* Item)
+{
+	if (IsValid(Item) == false) return;
+
+
+	Item->BeginInteract(this);
+}
+
+void AT2PlayerCharacter::Server_CompleteInteract_Implementation(AItemBase* Item)
+{
+	if (IsValid(Item) == false) return;
+
+	Item->CompleteInteract(this);
+}
+
+void AT2PlayerCharacter::Server_CancelInteract_Implementation(AItemBase* Item)
+{
+	if (IsValid(Item) == false) return;
+
+	Item->CanelInteract(this);
+}
+
+
+void AT2PlayerCharacter::AddNearbyItem(AItemBase* Item)
+{
+	if (!IsValid(Item)) return;
+
+	NearbyItems.Add(Item);
+}
+
+void AT2PlayerCharacter::RemoveNearbyItem(AItemBase* Item)
+{
+	if (!IsValid(Item)) return;
+
+	NearbyItems.Remove(Item);
+
+	if (CurrentInteractItem == Item)
+	{
+		CurrentInteractItem = nullptr;
+	}
+}
+
+void AT2PlayerCharacter::UpdateInteractTarget()
+{
+	FHitResult Hit;
+
+	FVector Start = FirstPersonCamera->GetComponentLocation();
+	FVector End = Start + FirstPersonCamera->GetForwardVector() * 300.f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
+		Start,
+		End,
+		ECC_Interact,
+		Params);
+
+	//LineTrace TEST
+//#if ENABLE_DRAW_DEBUG
+//	DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 0.05f, 0, 1.f);
+//#endif
+
+	if (bHit)
+	{
+		if (AItemBase* HitItem = Cast<AItemBase>(Hit.GetActor()))
+		{
+			if (NearbyItems.Contains(HitItem))
+			{
+				CurrentInteractItem = HitItem;
+				return;
+			}
+		}
+	}
+	if (bIsInteracting)
+	{
+		OnInteractCanceled();
+	}
+
+	if (AT2PlayerController* PC = Cast<AT2PlayerController>(GetController()))
+	{
+		PC->StopInteractUI();
+	}
+
+	CurrentInteractItem = nullptr;
+	
+}
+

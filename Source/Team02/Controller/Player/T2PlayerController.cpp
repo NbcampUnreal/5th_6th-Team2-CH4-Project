@@ -1,6 +1,8 @@
 #include "Controller/Player/T2PlayerController.h"
 #include "UW_SurvivorHUD.h"
 #include "T2PlayGameMod.h"
+#include "UI/UW_RoundProgressBar.h"
+#include "Components/Image.h"
 
 /*
  * ========================================

@@ -4,7 +4,7 @@
 #include "PlayerState/T2PlayerState.h"
 #include "SurvivorPlayerState.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool, bIsActive);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float);
 
 UCLASS()
@@ -49,16 +49,24 @@ protected:
 public:
     void ApplyTrapDebuff(float Damage, float SpeedMult, float SpeedDur, float VisionDur);
 
+    UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnVisionDebuffChanged OnVisionDebuffChanged;
 
     float GetSpeedMultiplier() const { return bIsSpeedDebuffed ? CurrentSpeedMultiplier : 1.0f; }
+
+    UFUNCTION(BlueprintCallable, Category = "Status")
+    bool IsDetectedByKiller() const { return bIsVisionDebuffed; }
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnVisionDebuffChanged OnDetectionStatusChanged;
 
 protected:
     UPROPERTY(ReplicatedUsing = OnRep_UpdateSpeed)
     bool bIsSpeedDebuffed = false;
     
+    UPROPERTY(Replicated)  
     float CurrentSpeedMultiplier = 1.0f;
-
+    
     UPROPERTY(ReplicatedUsing = OnRep_VisionDebuff)
     bool bIsVisionDebuffed = false;
 

@@ -9,6 +9,9 @@ class UFlashlightComponent;
 class USpringArmComponent;
 class UCamera;
 class USpotLightComponent;
+class AItemBase;
+class UUserWidget;
+class UMaterialInstanceDynamic;
 
 UCLASS()
 class TEAM02_API AT2PlayerCharacter : public AT2BaseCharacter
@@ -19,6 +22,10 @@ public:
 	AT2PlayerCharacter();
 
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -38,6 +45,32 @@ public:
 	void OnDeath();
 
 	void OnDeathMontageEneded();
+
+	void SetInteractableItem(AItemBase* Item);
+
+	void ClearInteractableItem(AItemBase* Item);
+
+	void OnInteractStart();
+
+	void OnInteractCompleted();
+
+	void OnInteractCanceled();
+
+	UFUNCTION(Server, Reliable)
+	void Server_BeginInteract(AItemBase* Item);
+
+	UFUNCTION(Server, Reliable)
+	void Server_CompleteInteract(AItemBase* Item);
+
+	UFUNCTION(Server, Reliable)
+	void Server_CancelInteract(AItemBase* Item);
+
+	void AddNearbyItem(AItemBase* Item);
+
+	void RemoveNearbyItem(AItemBase* Item);
+
+	void UpdateInteractTarget();
+
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -69,6 +102,24 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> CrouchInput;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> InteractInput;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	TObjectPtr<AItemBase> CurrentInteractItem;
+
+	UPROPERTY()
+	TSet<TObjectPtr<AItemBase>> NearbyItems;
+
+protected:
+	float CurrentInteractTime = 0.f;
+	float RequiredInteractTime = 1.5f;
+
+	UPROPERTY(Replicated)
+	bool bIsInteracting = false;
+
+	FTimerHandle InteractTraceTimer;
 
 
 #pragma region TEST

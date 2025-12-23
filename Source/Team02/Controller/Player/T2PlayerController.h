@@ -12,6 +12,7 @@
  */
 
 class UUW_SurvivorHUD;
+class UUW_RoundProgressBar;
 
 UCLASS()
 class TEAM02_API AT2PlayerController : public AT2BaseController
@@ -28,6 +29,16 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
     TObjectPtr<UUW_SurvivorHUD> SurvivorHUDWidgetInstance;
     */
+
+public:
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UUW_RoundProgressBar> InteractWidgetClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TObjectPtr<UUW_RoundProgressBar> InteractWidgetClassInstance;
+
+    UPROPERTY()
+    UMaterialInstanceDynamic* InteractMID;
 
 private:
     void ShowSurvivorHUD();

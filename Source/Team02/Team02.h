@@ -4,3 +4,8 @@
 
 #include "CoreMinimal.h"
 
+#pragma region Custom Collision Channel
+
+#define ECC_Interact ECC_GameTraceChannel1
+
+#pragma endregion
