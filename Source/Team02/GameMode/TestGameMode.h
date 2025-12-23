@@ -7,6 +7,7 @@
 #include "TestGameMode.generated.h"
 
 class AT2BaseController;
+class APortalActor;
 
 UCLASS()
 class TEAM02_API ATestGameMode : public AGameModeBase
@@ -15,6 +16,8 @@ class TEAM02_API ATestGameMode : public AGameModeBase
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void PostLogin(APlayerController* NewPlayer) override; 
+	virtual void Logout(AController* Exiting) override;
 	
 public:
 	ATestGameMode();
@@ -24,7 +27,6 @@ public:
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 
-public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Test Setup")
 	TSubclassOf<APawn> TestSurvivorPawnClass;
 
@@ -32,42 +34,31 @@ public:
 	TSubclassOf<APawn> TestKillerPawnClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Test Setup")
-	TSubclassOf<APlayerController> TestSurvivorControllerClass;
+	TSubclassOf<APlayerState> TestSurvivorPlayerStateClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Test Setup")
-	TSubclassOf<APlayerController> TestKillerControllerClass;
+	TSubclassOf<APlayerState> TestKillerPlayerStateClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Test Setup")
-	TSubclassOf<APlayerState> TestKillerPlayerStateClass; 
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Players")
 	TArray<TObjectPtr<AT2BaseController>> AlivePlayerControllers;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Players")
 	TArray<TObjectPtr<AT2BaseController>> DeadPlayerControllers;
 
 
-protected:
-	int32 PlayerCount;
-
-	virtual void PostLogin(APlayerController* NewPlayer) override; 
-
-	virtual void Logout(AController* Exiting) override;
-
-#pragma region Potal System
+#pragma region Portal System
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick")
-	TSubclassOf<class APortalActor> PortalClass;
+	TSubclassOf<APortalActor> PortalClass;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gimmick")
-	TObjectPtr<class APortalActor> CurrentPortal;
-	
+	TObjectPtr<APortalActor> CurrentPortal;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Gimmick")
 	void SpawnPortalAtRandomNavLocation();
-	
-	//void StartPortalTimer(float TimeLimit);
-
 #pragma endregion
+
+protected:
+	int32 PlayerCount = 0;
 };
