@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "T2GameInstance.h"
-#include "Controller/Player/T2PlayerController.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
 #include "T2GameModeBase.generated.h"
 

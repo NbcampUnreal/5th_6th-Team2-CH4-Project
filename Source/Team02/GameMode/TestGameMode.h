@@ -6,7 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "TestGameMode.generated.h"
 
-class AT2PlayerController;
+class AT2BaseController;
 
 UCLASS()
 class TEAM02_API ATestGameMode : public AGameModeBase
@@ -23,7 +23,6 @@ public:
 	
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
-	void OnCharacterDead(AT2PlayerController* InController);
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Test Setup")
@@ -42,10 +41,10 @@ public:
 	TSubclassOf<APlayerState> TestKillerPlayerStateClass; 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TArray<TObjectPtr<AT2PlayerController>> AlivePlayerControllers;
+	TArray<TObjectPtr<AT2BaseController>> AlivePlayerControllers;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TArray<TObjectPtr<AT2PlayerController>> DeadPlayerControllers;
+	TArray<TObjectPtr<AT2BaseController>> DeadPlayerControllers;
 
 
 protected:

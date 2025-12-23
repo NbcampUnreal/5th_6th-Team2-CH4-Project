@@ -1,6 +1,7 @@
 #include "GameMode/T2GameModeBase.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "Controller/T2BaseController.h"
 
 AT2GameModeBase::AT2GameModeBase()
 {
@@ -56,7 +57,7 @@ void AT2GameModeBase::StartGameAsSurvivor()
 
 void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
 {
-    AT2PlayerController* PC = Cast<AT2PlayerController>(DeadCharacter->GetController());
+    AT2BaseController* PC = Cast<AT2BaseController>(DeadCharacter->GetController());
     if (IsValid(PC) == false)
     {
         return;
