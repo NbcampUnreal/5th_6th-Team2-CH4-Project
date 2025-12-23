@@ -29,63 +29,73 @@ void AT2GameModeBase::BeginPlay()
     SwitchWidget(TitleWidgetClass);
 }
 
-void AT2GameModeBase::TransitionToRoleSelect()
+void AT2GameModeBase::TransitionToLobby()
 {
     APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
     if (PC)
     {
-        AActor* SelectCamera = FindCameraByTag(FName("SelectCamera"));
-        if (SelectCamera)
+        AActor* LobbyCamera = FindCameraByTag(FName("SelectCamera"));
+        if (LobbyCamera)
         {
-            PC->SetViewTargetWithBlend(SelectCamera, CameraBlendTime);
+            PC->SetViewTargetWithBlend(LobbyCamera, CameraBlendTime);
         }
     }
 
-    SwitchWidget(RoleSelectWidgetClass);
+    SwitchWidget(LobbyWidgetClass);
 }
 
-void AT2GameModeBase::StartGameAsKiller()
+int32 AT2GameModeBase::GetCurrentPlayerCount()
 {
-    StartGameWithRole(EPlayerRole::Killer);
+    return GetNumPlayers();
 }
 
-void AT2GameModeBase::StartGameAsSurvivor()
+bool AT2GameModeBase::CanStartGame()
 {
-    StartGameWithRole(EPlayerRole::Survivor);
+    return GetNumPlayers() >= RequiredPlayers;
+}
+
+void AT2GameModeBase::TryStartGame()
+{
+    if (!HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not server! "));
+        return;
+    }
+
+    if (!CanStartGame())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not enough players (%d/%d)"),
+            GetNumPlayers(), RequiredPlayers);
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players! "), GetNumPlayers());
+
+    // ServerTravel로 모든 클라이언트와 함께 이동
+    GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Library_Pack/Maps/%s? listen"), *GamePlayMapName.ToString()));
+}
+
+void AT2GameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+    UE_LOG(LogTemp, Warning, TEXT("Lobby PostLogin: Player joined.  Total: %d"), GetNumPlayers());
+}
+
+void AT2GameModeBase::Logout(AController* Exiting)
+{
+    Super::Logout(Exiting);
+    UE_LOG(LogTemp, Warning, TEXT("Lobby Logout: Player left.  Total: %d"), GetNumPlayers() - 1);
 }
 
 void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
 {
     AT2BaseController* PC = Cast<AT2BaseController>(DeadCharacter->GetController());
-    if (IsValid(PC) == false)
+    if (PC == nullptr)
     {
         return;
     }
-
-    ////관전자 상태로 전환
-    //PC->StartSpectate(Target);
-
-    ////관전 대상 선택
-    //ACharacter* AliverPlayer = FindAlivePlayerExcept(DeadCharacter);
-
-    //if (AlivePlayer)
-    //{
-    //    PC->SetViewTargetWithBlend(AlivePlayer, 0.5f);
-    //}
-}
-
-void AT2GameModeBase::StartGameWithRole(EPlayerRole InRole)
-{
-
-    UT2GameInstance* GI = Cast<UT2GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-    if (GI)
-    {
-        GI->SelectedRole = InRole;
-    }
-
-  
-    UGameplayStatics::OpenLevel(GetWorld(), GamePlayMapName);
+    // 관전 기능 - 나중에 구현
 }
 
 AActor* AT2GameModeBase::FindCameraByTag(FName Tag)
