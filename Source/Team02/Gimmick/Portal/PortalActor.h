@@ -1,11 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/SphereComponent.h"
-#include "NiagaraComponent.h"
 #include "PortalActor.generated.h"
 
 UCLASS()
@@ -13,77 +9,72 @@ class TEAM02_API APortalActor : public AActor
 {
 	GENERATED_BODY()
 	
-public:    
+public:	
 	APortalActor();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+
+	void ActivatePortal();
+
+	UFUNCTION()
+	void OnPlayerEnterPortal(class AT2PlayerCharacter* Player);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
+	float PortalTimeLimit = 120.0f;
 
 protected:
-	virtual void BeginPlay() override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UStaticMeshComponent* PortalMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	USphereComponent* CollisionComponent;
+	class USphereComponent* TriggerVolume;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UNiagaraComponent* PortalEffect;
+	class UParticleSystemComponent* PortalEffect;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UNiagaraComponent* LightningEffect;
+	UPROPERTY(Replicated)
+	TArray<APlayerState*> EnteredPlayers;
+
+	UPROPERTY(Replicated)
+	bool bIsActive = false;
+
+	UPROPERTY(Replicated)
+	float RemainingTime;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Portal")
+	bool IsPortalActive() const { return bIsActive; }
+
+	UFUNCTION(BlueprintCallable, Category = "Portal")
+	float GetRemainingTime() const { return RemainingTime; }
+
+	UFUNCTION(BlueprintCallable, Category = "Portal")
+	int32 GetEnteredPlayersCount() const { return EnteredPlayers.Num(); }
+
+	UFUNCTION(BlueprintCallable, Category = "Portal")
+	const TArray<APlayerState*>& GetEnteredPlayers() const { return EnteredPlayers; }
+
+protected:
+	FTimerHandle PortalTimerHandle;
 
 	UFUNCTION()
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, 
-						UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, 
-						bool bFromSweep, const FHitResult& SweepResult);
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, 
+		bool bFromSweep, const FHitResult& SweepResult);
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	TArray<TObjectPtr<APlayerController>> EnteredPlayers;
+	void UpdateTimer();
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	bool bIsPortalActive;
+	void OnPortalTimeExpired();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
-	float PortalTimeLimit;
+	bool AreAllSurvivorsEntered();
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	float RemainingTime;
+	void TransitionToNextMap();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|VFX")
-	float LightningHeight = 170.f;
+	void KillRemainingPlayers();
 
-	FTimerHandle PortalTimerHandle;
-	FTimerHandle CountdownTimerHandle;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UFUNCTION()
-	void OnPortalTimeout();
-
-	UFUNCTION()
-	void UpdateCountdown();
-
-	UFUNCTION()
-	bool CheckAllPlayersEntered();
-
-	UFUNCTION()
-	void TransitionToNextLevel();
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
-	FName NextLevelName;
-
-	UFUNCTION(BlueprintCallable, Category = "Portal")
-	void ActivatePortal();
-
-	UFUNCTION(BlueprintCallable, Category = "Portal")
-	bool HasPlayerEntered(APlayerController* PlayerController) const;
-
-	UFUNCTION(BlueprintPure, Category = "Portal")
-	float GetRemainingTime() const { return RemainingTime; }
-
-	UFUNCTION(BlueprintPure, Category = "Portal")
-	int32 GetEnteredPlayerCount() const { return EnteredPlayers.Num(); }
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_OnPortalActivated();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_OnPlayerEntered(APlayerController* PlayerController);
+	UPROPERTY(EditAnywhere, Category = "Game")
+	FName NextMapName = "NextLevel";
 };

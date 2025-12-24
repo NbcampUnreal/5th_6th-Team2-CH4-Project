@@ -14,19 +14,19 @@ class TEAM02_API AT2GameModeBase : public AGameModeBase
 public:
     AT2GameModeBase();
 
-    // Start ¹öÆ° ¡æ ·Îºñ È­¸éÀ¸·Î ÀüÈ¯
+    // Start ï¿½ï¿½Æ° ï¿½ï¿½ ï¿½Îºï¿½ È­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯
     UFUNCTION(BlueprintCallable, Category = "UI")
     void TransitionToLobby();
 
-    // ÇöÀç Á¢¼Ó ÀÎ¿ø ¼ö ¹ÝÈ¯
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Î¿ï¿½ ï¿½ï¿½ ï¿½ï¿½È¯
     UFUNCTION(BlueprintCallable, Category = "Lobby")
     int32 GetCurrentPlayerCount();
 
-    // °ÔÀÓ ½ÃÀÛ °¡´É ¿©ºÎ (3¸í Ã¼Å©)
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (3ï¿½ï¿½ Ã¼Å©)
     UFUNCTION(BlueprintCallable, Category = "Lobby")
     bool CanStartGame();
 
-    // È£½ºÆ®°¡ °ÔÀÓ ½ÃÀÛ ¹öÆ° Å¬¸¯ ½Ã È£Ãâ
+    // È£ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ° Å¬ï¿½ï¿½ ï¿½ï¿½ È£ï¿½ï¿½
     UFUNCTION(BlueprintCallable, Category = "Game")
     void TryStartGame();
 
@@ -59,4 +59,23 @@ private:
 
     AActor* FindCameraByTag(FName Tag);
     void SwitchWidget(TSubclassOf<UUserWidget> NewWidgetClass);
+
+#pragma region potal system
+public:
+    void OnKeyCollected(int32 CurrentTotalKeys);
+
+protected:
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    TSubclassOf<class APortalActor> PortalClass;
+
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    int32 KeysRequiredForPortal = 6;
+
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    float PortalDuration = 120.0f; // 2ë¶„
+
+private:
+    void SpawnPortalAtRandomLocation();
+    
+#pragma endregion 
 };

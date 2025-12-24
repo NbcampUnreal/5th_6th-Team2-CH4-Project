@@ -19,4 +19,15 @@ public:
 	void OnRep_KeyCount();
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintCallable, Category = "Game State")
+	int32 GetKeyCount() const { return TotalKeyCount; }
+
+	UFUNCTION(BlueprintCallable, Category = "Game State")
+	int32 GetAliveSurvivorCount() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Game State")
+	int32 GetEscapedSurvivorCount() const;
+
+	void OnSurvivorEscaped();
 };
