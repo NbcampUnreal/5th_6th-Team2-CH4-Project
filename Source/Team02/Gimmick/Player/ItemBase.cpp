@@ -33,23 +33,6 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
-
-	//if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-	//{
-	//	if (PC->IsLocalController())
-	//	{
-	//		APawn* Pawn = PC->GetPawn();
-	//		if (Pawn)
-	//		{
-	//			AT2PlayerState* PS = Pawn->GetPlayerState<AT2PlayerState>();
-	//			if (PS && PS->PlayerRole == EPlayerRole::Killer)
-	//			{
-	//				MeshComponent->SetVisibility(false, true);
-	//				InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	//			}
-	//		}
-	//	}
-	//}
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
