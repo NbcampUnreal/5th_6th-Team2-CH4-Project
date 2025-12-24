@@ -31,6 +31,8 @@ public:
 	UFUNCTION()
 	void OnRep_InteractingPC();
 
+	void HideForLocalPlayer();
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -6,7 +6,7 @@
 #include "DrawDebugHelpers.h"
 #include "Components/BoxComponent.h"
 #include "Character/KillerCharacter/T2KillerCharacter.h"
-#include "PlayerState/T2PlayerState.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 
 AItemBase::AItemBase()
 {
@@ -34,22 +34,22 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
 
-	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-	{
-		if (PC->IsLocalController())
-		{
-			APawn* Pawn = PC->GetPawn();
-			if (Pawn)
-			{
-				AT2PlayerState* PS = Pawn->GetPlayerState<AT2PlayerState>();
-				if (PS && PS->PlayerRole == EPlayerRole::Killer)
-				{
-					MeshComponent->SetVisibility(false, true);
-					InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-				}
-			}
-		}
-	}
+	//if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	//{
+	//	if (PC->IsLocalController())
+	//	{
+	//		APawn* Pawn = PC->GetPawn();
+	//		if (Pawn)
+	//		{
+	//			AT2PlayerState* PS = Pawn->GetPlayerState<AT2PlayerState>();
+	//			if (PS && PS->PlayerRole == EPlayerRole::Killer)
+	//			{
+	//				MeshComponent->SetVisibility(false, true);
+	//				InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -111,7 +111,11 @@ void AItemBase::CompleteInteract(AT2PlayerCharacter* Player)
 
 	if (Player->GetController() != InteractingPC) return;
 
-	//Player->AddItemToInventory(this);   Inventory Item Add  (Comming Soon)
+	if (auto* PS = Player->GetPlayerState<ASurvivorPlayerState>())
+	{
+		//PS->Inventory->AddItem(GetClass());
+	}
+
 	Destroy();
 
 }
@@ -130,6 +134,12 @@ void AItemBase::CanelInteract(AT2PlayerCharacter* Player)
 void AItemBase::OnRep_InteractingPC()
 {
 	//UpdateInteractionState();  UI "Other Player Using"
+}
+
+void AItemBase::HideForLocalPlayer()
+{
+	MeshComponent->SetVisibility(false, true);
+	InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 //Box Component Range TEST
