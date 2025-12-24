@@ -1,19 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "Gimmick/Player/ItemBase.h"
 #include "HealingPotion.generated.h"
 
 UCLASS()
-class TEAM02_API AHealingPotion : public AActor
+class TEAM02_API AHealingPotion : public AItemBase
 {
 	GENERATED_BODY()
 	
-public:	
-	AHealingPotion();
-
-protected:
-	virtual void BeginPlay() override;
-
-
 };

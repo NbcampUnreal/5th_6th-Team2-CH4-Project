@@ -7,6 +7,8 @@
 #include "Components/BoxComponent.h"
 #include "Character/KillerCharacter/T2KillerCharacter.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
+#include "PlayerState/Player/InventoryComponent.h"
+
 
 AItemBase::AItemBase()
 {
@@ -33,6 +35,13 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[%s] Role=%d Replicated ItemID=%s"),
+		*GetName(),
+		(int32)GetLocalRole(),
+		*ItemID.ToString()
+	);
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -40,6 +49,7 @@ void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AItemBase, InteractingPC);
+	DOREPLIFETIME(AItemBase, ItemID);
 }
 
 void AItemBase::OnOverlapBegin(
@@ -96,7 +106,7 @@ void AItemBase::CompleteInteract(AT2PlayerCharacter* Player)
 
 	if (auto* PS = Player->GetPlayerState<ASurvivorPlayerState>())
 	{
-		//PS->Inventory->AddItem(GetClass());
+		PS->InventoryComponent->AddItem(ItemID);
 	}
 
 	Destroy();
@@ -121,8 +131,18 @@ void AItemBase::OnRep_InteractingPC()
 
 void AItemBase::HideForLocalPlayer()
 {
-	MeshComponent->SetVisibility(false, true);
-	InteractiongBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TArray<UActorComponent*> Components;
+	GetComponents(Components);
+
+	for (UActorComponent* Comp : Components)
+	{
+		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Comp))
+		{
+			Prim->SetVisibility(false, true);
+			Prim->SetRenderInMainPass(false);
+			Prim->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
 }
 
 //Box Component Range TEST

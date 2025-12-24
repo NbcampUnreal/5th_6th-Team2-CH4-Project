@@ -6,6 +6,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
+#include "Gimmick/Player/ItemBase.h"
+#include "EngineUtils.h"
 
 
 AT2BaseCharacter::AT2BaseCharacter()
@@ -70,6 +72,18 @@ void AT2BaseCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
     {
         EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::HandleMoveInput);
         EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::HandleLookInput);
+    }
+}
+
+void AT2BaseCharacter::ApplyItemVisibilityByTag()
+{
+    if (!IsLocallyControlled()) return;
+
+    if (!ActorHasTag("Killer")) return;
+
+    for (TActorIterator<AItemBase> It(GetWorld()); It; ++It)
+    {
+        It->HideForLocalPlayer();
     }
 }
 

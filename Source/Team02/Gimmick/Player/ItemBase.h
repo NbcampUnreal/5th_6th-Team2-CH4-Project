@@ -33,6 +33,12 @@ public:
 
 	void HideForLocalPlayer();
 
+	UPROPERTY(VisibleAnywhere)
+	bool bIsLevelPlacedActor = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Item Data")
+	FName ItemID = NAME_None;
+
 protected:
 	virtual void BeginPlay() override;
 
