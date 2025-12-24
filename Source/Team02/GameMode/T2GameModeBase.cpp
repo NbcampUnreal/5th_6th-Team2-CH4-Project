@@ -2,6 +2,9 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Controller/T2BaseController.h"
+#include "NavigationSystem.h"
+#include "GameFramework/PlayerStart.h"
+#include "Gimmick/Portal/PortalActor.h"
 
 AT2GameModeBase::AT2GameModeBase()
 {
@@ -11,7 +14,7 @@ void AT2GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+      APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
     if (PC)
     {
@@ -72,7 +75,7 @@ void AT2GameModeBase::TryStartGame()
 
     UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players! "), GetNumPlayers());
 
-    // ServerTravel·Î ¸ðµç Å¬¶óÀÌ¾ðÆ®¿Í ÇÔ²² ÀÌµ¿
+    // ServerTravelï¿½ï¿½ ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½Ì¾ï¿½Æ®ï¿½ï¿½ ï¿½Ô²ï¿½ ï¿½Ìµï¿½
     GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Library_Pack/Maps/%s? listen"), *GamePlayMapName.ToString()));
 }
 
@@ -95,7 +98,7 @@ void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
     {
         return;
     }
-    // °üÀü ±â´É - ³ªÁß¿¡ ±¸Çö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ß¿ï¿½ ï¿½ï¿½ï¿½ï¿½
 }
 
 AActor* AT2GameModeBase::FindCameraByTag(FName Tag)
@@ -125,5 +128,92 @@ void AT2GameModeBase::SwitchWidget(TSubclassOf<UUserWidget> NewWidgetClass)
         {
             CurrentWidget->AddToViewport();
         }
+    }
+}
+
+void AT2GameModeBase::OnKeyCollected(int32 CurrentTotalKeys)
+{
+    UE_LOG(LogTemp, Warning, TEXT(" OnKeyCollected called! Current Keys: %d / Required: %d"), 
+       CurrentTotalKeys, KeysRequiredForPortal);
+
+    if (CurrentTotalKeys >= KeysRequiredForPortal)
+    {
+        UE_LOG(LogTemp, Warning, TEXT(" Keys requirement met! Spawning portal..."));
+        SpawnPortalAtRandomLocation();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT(" Need %d more keys for portal"), 
+            KeysRequiredForPortal - CurrentTotalKeys);
+    }
+}
+
+void AT2GameModeBase::SpawnPortalAtRandomLocation()
+{
+     if (!HasAuthority())
+    {
+        UE_LOG(LogTemp, Error, TEXT(" SpawnPortal: Not Authority!"));
+        return;
+    }
+
+    if (!PortalClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT(" PortalClass is not set in GameMode!"));
+        return;
+    }
+
+    FVector SpawnLocation = FVector::ZeroVector;
+    bool bFoundLocation = false;
+
+    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    if (NavSys)
+    {
+        FNavLocation RandomLocation;
+        if (NavSys->GetRandomReachablePointInRadius(FVector::ZeroVector, 5000.f, RandomLocation))
+        {
+            SpawnLocation = RandomLocation.Location + FVector(0, 0, 100); // ê³µì¤‘ì— ë„ìš°ê¸°
+            bFoundLocation = true;
+            UE_LOG(LogTemp, Warning, TEXT(" Portal spawn location found via NavMesh: %s"), 
+                *SpawnLocation.ToString());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT(" NavMesh random point failed, trying PlayerStart..."));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT(" NavigationSystem not found, trying PlayerStart..."));
+    }
+    
+
+    // í¬íƒˆ ìŠ¤í°
+    if (bFoundLocation)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+        
+        APortalActor* Portal = GetWorld()->SpawnActor<APortalActor>(
+            PortalClass, 
+            SpawnLocation, 
+            FRotator::ZeroRotator, 
+            SpawnParams
+        );
+        
+        if (Portal)
+        {
+            Portal->PortalTimeLimit = PortalDuration;
+            Portal->ActivatePortal();
+            UE_LOG(LogTemp, Warning, TEXT(" Portal spawned successfully at %s! Duration: %.0f seconds"), 
+                *SpawnLocation.ToString(), PortalDuration);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT(" Failed to spawn Portal actor!"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Could not find valid spawn location for portal!"));
     }
 }

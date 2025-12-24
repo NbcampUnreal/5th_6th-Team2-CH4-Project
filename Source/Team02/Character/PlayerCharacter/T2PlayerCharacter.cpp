@@ -71,13 +71,12 @@ AT2PlayerCharacter::AT2PlayerCharacter()
 	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("SpotLightComponent"));
 	Flashlight->SetupAttachment(FirstPersonCamera);
 	Flashlight->SetVisibility(false);
-
 }
 
 void AT2PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	if (!bIsInteracting) return;
 
 	CurrentInteractTime += DeltaTime;
@@ -151,28 +150,20 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		EIC->BindAction(InteractInput, ETriggerEvent::Completed, this, &ThisClass::OnInteractCompleted);
 		EIC->BindAction(InteractInput, ETriggerEvent::Canceled, this, &ThisClass::OnInteractCanceled);
 	}
-
 }
 
 void AT2PlayerCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-
-	//ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
-	//if (PS)
-	//{
-	//	PS->OnHPChanged.AddUObject(this, &ThisClass::HandleHPChanged);
-	//	UE_LOG(LogTemp, Warning, TEXT("PlayerState arrived, delegate bound"));
-	//}
 }
 
 void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 {
-	if(IsLocallyControlled()==false)
+	if (IsLocallyControlled() == false)
 	{
 		return;
 	}
-	
+
 	bool bTargetrState = !bIsCrouched;
 	if (bTargetrState)
 	{
@@ -182,7 +173,7 @@ void AT2PlayerCharacter::HandleCrouchInput(const FInputActionValue& InValue)
 	{
 		UnCrouch();
 	}
-	
+
 	Server_ToggleCrouch();
 }
 
@@ -200,10 +191,6 @@ void AT2PlayerCharacter::HandleFlashlightInput()
 
 void AT2PlayerCharacter::HandleHPChanged(float CurrentHP, float MaxHP)
 {
-	/*if (CurrentHP > 0)
-	{
-		Multicast_PlayHitMontage();
-	}*/
 }
 
 float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -229,51 +216,52 @@ float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dam
 	return DamageAmount;
 }
 
+// ★★★ 수정된 OnDeath 함수 ★★★
 void AT2PlayerCharacter::OnDeath()
 {
-	if (HasAuthority())
-	{
-		Multicast_PlayDeathMontage();
+	// 이미 죽은 상태면 무시 (중복 호출 방지)
+	if (bIsDead) return;
+	bIsDead = true;
 
-		ATestGameMode* GM = GetWorld()->GetAuthGameMode<ATestGameMode>();
-		if (IsValid(GM) == true)
-		{
-			AT2BaseController* PC = Cast<AT2BaseController>(GetOwner());
-			{
-				if (IsValid(PC) == true)
-				{
-					// GM->OnCharacterDead(PC);   When Player Died, Notice to GameMode 
-				}
-			}
-		}
-	}
+	UE_LOG(LogTemp, Warning, TEXT("=== OnDeath Called for %s ==="), *GetName());
 
 	if (!HasAuthority()) return;
-	
-	// 1. GameState에 알림 (SurvivorsAlive 감소)
-	AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
-	if (GS)
+
+	// 1. 사망 몽타주 재생
+	Multicast_PlayDeathMontage();
+
+	// 2. 입력 비활성화
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
-		GS->OnSurvivorDied();
-		UE_LOG(LogTemp, Warning, TEXT("GameState->OnSurvivorDied called.  SurvivorsAlive:  %d"), GS->SurvivorsAlive);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameState is NULL in SetDead!"));
+		DisableInput(PC);
 	}
 
-	// 2. GameMode에 알림 (승패 체크)
+	// 3. 충돌 비활성화 (킬러가 더 이상 때릴 수 없게)
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 4. GameMode에 알림 (팀원이 요청한 방식)
 	AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>();
 	if (GM)
 	{
-		GM->OnPlayerDied(nullptr);
-		UE_LOG(LogTemp, Warning, TEXT("GameMode->OnPlayerDied called"));
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		GM->OnCharacterDead(PC);
+		UE_LOG(LogTemp, Warning, TEXT("GameMode->OnCharacterDead called"));
 	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameMode is NULL in SetDead! "));
-	}
-	
+
+	// 5. 일정 시간 후 시체 제거 (3초)
+	FTimerHandle DeathTimerHandle;
+	GetWorldTimerManager().SetTimer(DeathTimerHandle, this, &AT2PlayerCharacter::DestroyAfterDeath, 3.0f, false);
+}
+
+// ★★★ 추가: 사망 후 시체 제거 ★★★
+void AT2PlayerCharacter::DestroyAfterDeath()
+{
+	if (!HasAuthority()) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("DestroyAfterDeath:  Destroying %s"), *GetName());
+
+	DetachFromControllerPendingDestroy();
+	Destroy();
 }
 
 void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
@@ -288,12 +276,10 @@ void AT2PlayerCharacter::Server_ToggleCrouch_Implementation()
 	}
 }
 
-
 void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 {
 	bIsFirstPerson = !bIsFirstPerson;
 
-	//FirstPerson
 	if (bIsFirstPerson)
 	{
 		FirstPersonCamera->SetActive(true);
@@ -313,7 +299,6 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 
 		SpringArmComponent->bUsePawnControlRotation = false;
 	}
-	//ThirdPerson
 	else
 	{
 		ThirdPersonCamera->SetActive(true);
@@ -336,16 +321,12 @@ void AT2PlayerCharacter::HandleViewModeInput(const FInputActionValue& InValue)
 
 void AT2PlayerCharacter::OnDeathMontageEneded()
 {
-	if (!HasAuthority()) return;
-
-	DetachFromControllerPendingDestroy();
-	Destroy();
+	// 이제 사용하지 않음 - DestroyAfterDeath()로 대체
 }
 
 void AT2PlayerCharacter::SetInteractableItem(AItemBase* Item)
 {
 	CurrentInteractItem = Item;
-	//ShowInteractionUI(true);
 }
 
 void AT2PlayerCharacter::ClearInteractableItem(AItemBase* Item)
@@ -353,7 +334,6 @@ void AT2PlayerCharacter::ClearInteractableItem(AItemBase* Item)
 	if (CurrentInteractItem == Item)
 	{
 		CurrentInteractItem = nullptr;
-		//ShowInteractionUI(false);
 	}
 }
 
@@ -371,9 +351,7 @@ void AT2PlayerCharacter::OnInteractStart()
 		PC->StartInteractUI();
 	}
 
-
 	Server_BeginInteract(CurrentInteractItem);
-	//StartInteractProgressUI();    상호작용체크/UI게이지 시작
 }
 
 void AT2PlayerCharacter::OnInteractCompleted()
@@ -388,7 +366,7 @@ void AT2PlayerCharacter::OnInteractCompleted()
 		PC->StopInteractUI();
 	}
 
-	Server_CompleteInteract(CurrentInteractItem);    //서버RPC호출 /실제 아이템 획득 요청
+	Server_CompleteInteract(CurrentInteractItem);
 }
 
 void AT2PlayerCharacter::OnInteractCanceled()
@@ -404,13 +382,11 @@ void AT2PlayerCharacter::OnInteractCanceled()
 	}
 
 	Server_CancelInteract(CurrentInteractItem);
-	 // 타이머중지
 }
 
 void AT2PlayerCharacter::Server_BeginInteract_Implementation(AItemBase* Item)
 {
 	if (IsValid(Item) == false) return;
-
 
 	Item->BeginInteract(this);
 }
@@ -428,7 +404,6 @@ void AT2PlayerCharacter::Server_CancelInteract_Implementation(AItemBase* Item)
 
 	Item->CanelInteract(this);
 }
-
 
 void AT2PlayerCharacter::AddNearbyItem(AItemBase* Item)
 {
@@ -466,11 +441,6 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 		ECC_Interact,
 		Params);
 
-	//LineTrace TEST
-//#if ENABLE_DRAW_DEBUG
-//	DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 0.05f, 0, 1.f);
-//#endif
-
 	if (bHit)
 	{
 		if (AItemBase* HitItem = Cast<AItemBase>(Hit.GetActor()))
@@ -493,6 +463,4 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 	}
 
 	CurrentInteractItem = nullptr;
-	
 }
-

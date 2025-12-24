@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "T2PlayGameMod.h"
 #include "T2PlayGameState.h"
+#include "GameState/T2GameStateBase.h"
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -161,7 +162,7 @@ void ASurvivorPlayerState::SetEscaped()
 
 	bIsEscaped = true;
 
-	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
+	if (AT2GameStateBase* GS = GetWorld()->GetGameState<AT2GameStateBase>())
 	{
 		GS->OnSurvivorEscaped();
 	}

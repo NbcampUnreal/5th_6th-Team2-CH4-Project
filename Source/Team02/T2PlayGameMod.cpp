@@ -16,7 +16,7 @@ void AT2PlayGameMod::PreLogin(const FString& Options, const FString& Address, co
 {
     if (GetNumPlayers() >= RequiredPlayers)
     {
-        ErrorMessage = TEXT("Server is full.  Maximum 3 players allowed.");
+        ErrorMessage = TEXT("Server is full. Maximum 3 players allowed.");
         UE_LOG(LogTemp, Warning, TEXT("PreLogin:  Rejected player - server full (%d/%d)"), GetNumPlayers(), RequiredPlayers);
         return;
     }
@@ -32,10 +32,9 @@ void AT2PlayGameMod::PostLogin(APlayerController* NewPlayer)
 
     ConnectedPlayers.AddUnique(NewPlayer);
 
-    UE_LOG(LogTemp, Warning, TEXT("PostLogin - Player joined.  Total: %d/%d"),
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin - Player joined.  Total:  %d/%d"),
         ConnectedPlayers.Num(), RequiredPlayers);
 
-    // 3명 모이면 역할 배정
     AssignRolesIfReady();
 }
 
@@ -51,11 +50,10 @@ void AT2PlayGameMod::AssignRolesIfReady()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("=== AssignRolesIfReady: Assigning roles! ==="));
+    UE_LOG(LogTemp, Warning, TEXT("=== AssignRolesIfReady:  Assigning roles!  ==="));
 
     bRolesAssigned = true;
 
-    // 플레이어 목록 셔플 (랜덤 배정)
     TArray<APlayerController*> ShuffledPlayers = ConnectedPlayers;
 
     for (int32 i = ShuffledPlayers.Num() - 1; i > 0; --i)
@@ -88,12 +86,11 @@ void AT2PlayGameMod::AssignRolesIfReady()
 
         PS->SetPlayerRole(AssignedRole);
 
-        UE_LOG(LogTemp, Warning, TEXT("Player %d assigned: %s (IsLocal: %s)"),
+        UE_LOG(LogTemp, Warning, TEXT("Player %d assigned:  %s (IsLocal: %s)"),
             i,
             AssignedRole == EPlayerRole::Killer ? TEXT("KILLER") : TEXT("SURVIVOR"),
             PC->IsLocalPlayerController() ? TEXT("YES") : TEXT("NO"));
 
-        // 기존 Pawn 제거
         APawn* OldPawn = PC->GetPawn();
         if (OldPawn)
         {
@@ -102,24 +99,19 @@ void AT2PlayGameMod::AssignRolesIfReady()
             OldPawn->Destroy();
         }
 
-        // 새 Pawn으로 리스폰
         RestartPlayer(PC);
 
-        // Possess 확인
         APawn* NewPawn = PC->GetPawn();
         if (NewPawn)
         {
-            // 입력 활성화
             NewPawn->EnableInput(PC);
-
-            UE_LOG(LogTemp, Warning, TEXT("Player %d:  NewPawn = %s"), i, *NewPawn->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("Player %d: NewPawn = %s"), i, *NewPawn->GetName());
         }
         else
         {
             UE_LOG(LogTemp, Error, TEXT("Player %d: NO PAWN AFTER RESTART! "), i);
         }
 
-        // 입력 모드 설정
         FInputModeGameOnly InputMode;
         PC->SetInputMode(InputMode);
         PC->bShowMouseCursor = false;
@@ -127,11 +119,11 @@ void AT2PlayGameMod::AssignRolesIfReady()
         UE_LOG(LogTemp, Warning, TEXT("Player %d respawned and input configured"), i);
     }
 
-    // GameState에 생존자 수 설정
     if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
     {
         GS->TotalSurvivors = SurvivorCount;
         GS->SurvivorsAlive = SurvivorCount;
+        UE_LOG(LogTemp, Warning, TEXT("GameState:  TotalSurvivors=%d, SurvivorsAlive=%d"), SurvivorCount, SurvivorCount);
     }
 
     UE_LOG(LogTemp, Warning, TEXT("Roles assigned - Killer: 1, Survivors: %d"), SurvivorCount);
@@ -174,7 +166,7 @@ UClass* AT2PlayGameMod::GetDefaultPawnClassForController_Implementation(AControl
     }
     else if (InRole == EPlayerRole::Survivor && SurvivorClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("GetDefaultPawnClass: Survivor"));
+        UE_LOG(LogTemp, Warning, TEXT("GetDefaultPawnClass:  Survivor"));
         return SurvivorClass;
     }
 
@@ -199,25 +191,36 @@ AActor* AT2PlayGameMod::ChoosePlayerStart_Implementation(AController* Player)
     return Super::ChoosePlayerStart_Implementation(Player);
 }
 
-void AT2PlayGameMod::OnPlayerDied(APlayerController* Player)
+// ★★★ 팀원이 요청한 함수: 캐릭터 사망 처리 ★★★
+void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
 {
     if (!HasAuthority()) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("Player Died! "));
+    UE_LOG(LogTemp, Warning, TEXT("=== OnCharacterDead Called ==="));
 
-    if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
+    // GameState에서 생존자 수 감소
+    AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
+    if (GS)
     {
         GS->OnSurvivorDied();
+        UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive decreased to:  %d"), GS->SurvivorsAlive);
     }
 
+    // 승패 조건 체크
     CheckWinConditions();
+}
+
+void AT2PlayGameMod::OnPlayerDied(APlayerController* Player)
+{
+    // OnCharacterDead로 통합
+    OnCharacterDead(Player);
 }
 
 void AT2PlayGameMod::OnPlayerEscaped(APlayerController* Player)
 {
     if (!HasAuthority()) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("Player Escaped!"));
+    UE_LOG(LogTemp, Warning, TEXT("Player Escaped! "));
 
     if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
     {
@@ -244,12 +247,13 @@ void AT2PlayGameMod::CheckWinConditions()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors:  %d"),
+    UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
         GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
 
+    // ★ 모든 생존자가 죽거나 탈출했을 때만 게임 종료
     if (GS->SurvivorsAlive <= 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No survivors alive!"));
+        UE_LOG(LogTemp, Warning, TEXT("No survivors alive! "));
 
         if (GS->SurvivorsEscaped == 0)
         {
@@ -264,7 +268,7 @@ void AT2PlayGameMod::CheckWinConditions()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Game still in progress"));
+    UE_LOG(LogTemp, Warning, TEXT("Game still in progress - Survivors remaining: %d"), GS->SurvivorsAlive);
 }
 
 void AT2PlayGameMod::EndMatch(EMatchResult Result)
@@ -286,7 +290,7 @@ void AT2PlayGameMod::EndMatch(EMatchResult Result)
     default: ResultStr = TEXT("Draw"); break;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED:  %s ==="), *ResultStr);
+    UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED: %s ==="), *ResultStr);
 
     FTimerHandle TimerHandle;
     GetWorldTimerManager().SetTimer(TimerHandle, [this]()

@@ -16,6 +16,7 @@ public:
 
 	void CompleteInteract(class AT2PlayerCharacter* Player) override;
 
+	virtual void BeginInteract(class AT2PlayerCharacter* Player) override;
 
 protected:
 	virtual void BeginPlay() override;
