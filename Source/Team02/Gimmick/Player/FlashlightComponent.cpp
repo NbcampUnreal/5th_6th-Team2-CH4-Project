@@ -66,7 +66,7 @@ void UFlashlightComponent::DrainBattery(float DeltaTime)
 	CurrentBattery -= DrainPerSecond * DeltaTime;
 	CurrentBattery = FMath::Clamp(CurrentBattery, 0.f, MaxBattery);
 
-	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("%s / Battery : %f"),*GetOwner()->GetName(), CurrentBattery), true, true, FLinearColor::Blue, 5.f);
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("%s / Battery : %f"),*GetOwner()->GetName(), CurrentBattery), true, true, FLinearColor::Blue, 5.f);
 
 	if (CurrentBattery <= 0.f)
 	{
@@ -75,21 +75,13 @@ void UFlashlightComponent::DrainBattery(float DeltaTime)
 	}
 }
 
-void UFlashlightComponent::AddBattery(float AddBatteryAmount)
+void UFlashlightComponent::AddBattery()
 {
-	CurrentBattery = FMath::Clamp(CurrentBattery + AddBatteryAmount, 0.f, MaxBattery);
-
-	UE_LOG(LogTemp, Warning, TEXT("Battery Amount : %f"), CurrentBattery);
 }
 
 void UFlashlightComponent::OnRep_Battery()
 {
-	if (!IsValid(this))
-	{
-		return;
-	}
-
-	OnBatteryChanged.Broadcast(CurrentBattery, MaxBattery);
+	// UI
 }
 
 void UFlashlightComponent::OnRep_FlashlightOn()

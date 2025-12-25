@@ -1,14 +1,10 @@
 #include "Controller/T2BaseController.h"
-#include "PlayerState/Player/SurvivorPlayerState.h"
+#include "PlayerState/T2PlayerState.h"
 #include "UI/UW_KillerHUD.h"
 #include "Blueprint/UserWidget.h"
-#include "UW_SurvivorHUD.h"
 #include "UI/UW_RoundProgressBar.h"
 #include "Components/Image.h"
 #include "Kismet/GameplayStatics.h"
-#include "Character/T2BaseCharacter.h"
-#include "Gimmick/Player/ItemBase.h"
-#include "EngineUtils.h"
 
 AT2BaseController::AT2BaseController()
 {
@@ -61,8 +57,6 @@ void AT2BaseController::OnPossess(APawn* InPawn)
             }
         }
     }
-
-    Client_ApplyItemVisibility();
 }
 
 void AT2BaseController::BindRoleChangedDelegate()
@@ -139,16 +133,12 @@ void AT2BaseController::ShowSurvivorHUD()
 
     if (!SurvivorHUDInstance)
     {
-        SurvivorHUDInstance = CreateWidget<UUW_SurvivorHUD>(this, SurvivorHUDWidgetClass);
+        SurvivorHUDInstance = CreateWidget<UUserWidget>(this, SurvivorHUDWidgetClass);
     }
-
-    ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
-    if (!PS) return;
 
     if (SurvivorHUDInstance)
     {
         SurvivorHUDInstance->AddToViewport();
-        SurvivorHUDInstance->Init(PS);
         UE_LOG(LogTemp, Warning, TEXT("SurvivorHUD displayed! "));
     }
 }
@@ -296,17 +286,4 @@ void AT2BaseController::StopInteractUI()
 
     InteractMID = nullptr;
     bInteractUIActive = false;
-}
-
-void AT2BaseController::Client_ApplyItemVisibility_Implementation()
-{
-    APawn* PossessedPawn = GetPawn();
-    if (!PossessedPawn) return;
-
-    if (!PossessedPawn->ActorHasTag("Killer")) return;
-
-    for (TActorIterator<AItemBase> It(GetWorld()); It; ++It)
-    {
-        It->HideForLocalPlayer();
-    }
 }

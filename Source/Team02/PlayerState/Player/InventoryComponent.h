@@ -2,20 +2,20 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Engine/DataTable.h"
 #include "InventoryComponent.generated.h"
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
 class AItemBase;
 
 USTRUCT(BlueprintType)
-struct FInventorySlot 
+struct FInventoryItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory Slot")
-	FName ItemID;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<AItemBase> ItemClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 Count = 1;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -26,36 +26,15 @@ class TEAM02_API UInventoryComponent : public UActorComponent
 public:	
 	UInventoryComponent();
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void AddItem(FName ItemID); 
+	void AddItem(TSubclassOf<AItemBase> ItemClass);
 
-	void UseSlot(int32 SlotIndex);
+	void UseItemByIndex(int32 Index);
 
-	UFUNCTION()
-	void OnRep_Items();
+	UFUNCTION(Server, Reliable)
+	void Server_UseItem(int32 Index);
 
 protected:
 	virtual void BeginPlay() override;
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_Items, Category = "Inventory")
-	TArray<FInventorySlot> Items;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
-	int32 InventorySize = 5;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Inventory|UI")
-	TSubclassOf<UUserWidget> InventoryWidgetClass;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Inventory|UI")
-	UUserWidget* InventoryWidget; 
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory|Data")
-	UDataTable* ItemDataTable;
-
-	FOnInventoryUpdated OnInventoryUpdated;
 		
 };

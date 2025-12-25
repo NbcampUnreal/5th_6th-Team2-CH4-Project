@@ -46,9 +46,6 @@ public:
 
     bool bInteractUIActive = false;
 
-    UFUNCTION(Client, Reliable)
-    void Client_ApplyItemVisibility();
-
 protected:
     virtual void SetupInputComponent() override;
 
@@ -59,10 +56,10 @@ protected:
     TObjectPtr<UUW_KillerHUD> KillerHUDInstance;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI|Survivor")
-    TSubclassOf<UUW_SurvivorHUD> SurvivorHUDWidgetClass;
+    TSubclassOf<UUserWidget> SurvivorHUDWidgetClass;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Survivor")
-    TObjectPtr<UUW_SurvivorHUD> SurvivorHUDInstance;
+    TObjectPtr<UUserWidget> SurvivorHUDInstance;
 
     // ¡Ú ESC ¼³Á¤Ã¢ À§Á¬
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI|Settings")

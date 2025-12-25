@@ -22,12 +22,9 @@ public:
 	// ¡Ú Ãß°¡
 	virtual void PossessedBy(AController* NewController) override;
 
-	void ApplyItemVisibilityByTag();
-
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 
 public:
 	virtual void Tick(float DeltaTime) override;

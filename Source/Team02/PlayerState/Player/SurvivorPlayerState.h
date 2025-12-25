@@ -7,16 +7,12 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool, bIsActive);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float);
 
-class UInventoryComponent;
-
 UCLASS()
 class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
 {
     GENERATED_BODY()
 
 public:
-    ASurvivorPlayerState();
-
     virtual void BeginPlay() override;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HP")
@@ -43,9 +39,6 @@ public:
     void SetEscaped();
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TObjectPtr<UInventoryComponent> InventoryComponent;
 
 protected:
     UFUNCTION()

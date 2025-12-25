@@ -7,14 +7,6 @@
 #include "T2PlayGameMod.h"
 #include "T2PlayGameState.h"
 #include "GameState/T2GameStateBase.h"
-#include "PlayerState/Player/InventoryComponent.h"
-
-ASurvivorPlayerState::ASurvivorPlayerState()
-{
-	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
-	bReplicates = true;
-
-}
 
 void ASurvivorPlayerState::BeginPlay()
 {
@@ -159,9 +151,8 @@ void ASurvivorPlayerState::ApplyHealByItem(float HealAmount)
 {
 	if (!HasAuthority()) return;
 
-	CurrentHP = FMath::Clamp(CurrentHP + HealAmount, 0.f, MaxHP);
+	CurrentHP = FMath::Clamp(CurrentHP + HealAmount, 100.f, MaxHP);
 
-	UE_LOG(LogTemp, Warning, TEXT("SurvivorPS HP: %f"), CurrentHP);
 }
 
 void ASurvivorPlayerState::SetEscaped()
