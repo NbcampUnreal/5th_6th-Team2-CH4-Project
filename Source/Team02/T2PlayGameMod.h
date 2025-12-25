@@ -18,7 +18,7 @@ public:
     virtual void PostLogin(APlayerController* NewPlayer) override;
     virtual void Logout(AController* Exiting) override;
 
-    // ★★★ 팀원이 요청한 함수:  캐릭터 사망 처리 ★★★
+
     UFUNCTION(BlueprintCallable, Category = "Match")
     void OnCharacterDead(APlayerController* DeadPlayerController);
 
