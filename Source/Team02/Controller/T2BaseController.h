@@ -9,7 +9,7 @@ class UUserWidget;
 class UUW_KillerHUD;
 class UUW_SurvivorHUD;
 class UUW_RoundProgressBar;
-
+class AT2PlayerState;
 UCLASS()
 class TEAM02_API AT2BaseController : public APlayerController
 {
@@ -25,18 +25,18 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateHUDForRole(EPlayerRole NewRole);
 
-    // ★ ESC 설정창 토글
+
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ToggleSettingsMenu();
 
-    // ★ 설정창 열기/닫기
+
     UFUNCTION(BlueprintCallable, Category = "UI")
     void OpenSettingsMenu();
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void CloseSettingsMenu();
 
-    // ★ 게임 나가기 (블루프린트에서 호출)
+
     UFUNCTION(BlueprintCallable, Category = "Game")
     void RequestLeaveGame();
 
@@ -64,7 +64,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Survivor")
     TObjectPtr<UUW_SurvivorHUD> SurvivorHUDInstance;
 
-    // ★ ESC 설정창 위젯
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI|Settings")
     TSubclassOf<UUserWidget> SettingsMenuWidgetClass;
 
@@ -73,7 +73,17 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Settings")
     bool bIsSettingsMenuOpen = false;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI|Title")
+    TSubclassOf<UUserWidget> TitleWidgetClass;
 
+    UPROPERTY()
+    TObjectPtr<UUserWidget> TitleWidgetInstance;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI|Lobby")
+    TSubclassOf<UUserWidget> LobbyWidgetClass;
+
+    UPROPERTY()
+    TObjectPtr<UUserWidget> LobbyWidgetInstance;
 public:
     UPROPERTY(EditDefaultsOnly, Category = "UI|Survivor")
     TSubclassOf<UUW_RoundProgressBar> InteractWidgetClass;
@@ -83,6 +93,23 @@ public:
 
     UPROPERTY()
     UMaterialInstanceDynamic* InteractMID;
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowTitleUI();
+
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideTitleUI();
+
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void TransitionToLobby();
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowLobbyUI();
+
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideLobbyUI();
+    UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Game")
+    void ServerRequestStartGame();
+    UFUNCTION(Client, Reliable)
+    void Client_OnGameStarted();
 
 private:
     void ShowKillerHUD();
@@ -96,4 +123,7 @@ private:
     EPlayerRole CurrentDisplayedRole = EPlayerRole::None;
     bool bHUDInitialized = false;
     bool bDelegateBound = false;
+    UPROPERTY()
+    TObjectPtr<AT2PlayerState> BoundPlayerState;
+
 };

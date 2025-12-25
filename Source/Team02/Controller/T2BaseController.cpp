@@ -9,6 +9,7 @@
 #include "Character/T2BaseCharacter.h"
 #include "Gimmick/Player/ItemBase.h"
 #include "EngineUtils.h"
+#include "GameMode/T2GameModeBase.h" 
 
 AT2BaseController::AT2BaseController()
 {
@@ -18,13 +19,132 @@ void AT2BaseController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 서버:  BeginPlay에서 델리게이트 바인딩 시도
-    if (HasAuthority() && IsLocalPlayerController())
+    // 로컬 플레이어면 타이틀 UI 표시
+    if (IsLocalPlayerController())
     {
+        // 타이틀 맵인지 확인 (Example 맵)
+        FString MapName = GetWorld()->GetMapName();
+        MapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
+
+        if (MapName.Contains(TEXT("Example")) && !MapName.Contains(TEXT("Example1")))
+        {
+            ShowTitleUI();
+        }
+
         BindRoleChangedDelegate();
     }
 }
 
+void AT2BaseController::ShowTitleUI()
+{
+    if (!IsLocalPlayerController()) return;
+
+    if (!TitleWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TitleWidgetClass is not set! "));
+        return;
+    }
+
+    if (!TitleWidgetInstance)
+    {
+        TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass);
+    }
+
+    if (TitleWidgetInstance)
+    {
+        TitleWidgetInstance->AddToViewport();
+
+        bShowMouseCursor = true;
+        FInputModeUIOnly InputMode;
+        SetInputMode(InputMode);
+
+        // 타이틀 카메라 설정
+        TArray<AActor*> FoundCameras;
+        UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("TitleCamera"), FoundCameras);
+
+        UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI: Found %d TitleCamera(s)"), FoundCameras.Num());
+
+        if (FoundCameras.Num() > 0)
+        {
+            SetViewTargetWithBlend(FoundCameras[0], 0.0f);
+            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI: Set view to %s"), *FoundCameras[0]->GetName());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("ShowTitleUI:  No TitleCamera found!  Add 'TitleCamera' tag to camera actor. "));
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("TitleUI displayed! "));
+    }
+}
+
+void AT2BaseController::HideTitleUI()
+{
+    if (TitleWidgetInstance && TitleWidgetInstance->IsInViewport())
+    {
+        TitleWidgetInstance->RemoveFromParent();
+    }
+    TitleWidgetInstance = nullptr;
+}
+
+void AT2BaseController::TransitionToLobby()
+{
+    if (!IsLocalPlayerController()) return;
+
+    HideTitleUI();
+
+    // 로비 카메라로 전환
+    TArray<AActor*> FoundCameras;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SelectCamera"), FoundCameras);
+
+    UE_LOG(LogTemp, Warning, TEXT("TransitionToLobby: Found %d SelectCamera(s)"), FoundCameras.Num());
+
+    if (FoundCameras.Num() > 0)
+    {
+        SetViewTargetWithBlend(FoundCameras[0], 1.0f);
+        UE_LOG(LogTemp, Warning, TEXT("TransitionToLobby: Set view to %s"), *FoundCameras[0]->GetName());
+    }
+
+    // 로비 UI 표시
+    ShowLobbyUI();
+
+    UE_LOG(LogTemp, Warning, TEXT("Transitioned to Lobby! "));
+}
+void AT2BaseController::ShowLobbyUI()
+{
+    if (!IsLocalPlayerController()) return;
+
+    if (!LobbyWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LobbyWidgetClass is not set! "));
+        return;
+    }
+
+    if (!LobbyWidgetInstance)
+    {
+        LobbyWidgetInstance = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
+    }
+
+    if (LobbyWidgetInstance)
+    {
+        LobbyWidgetInstance->AddToViewport();
+
+        bShowMouseCursor = true;
+        FInputModeUIOnly InputMode;
+        SetInputMode(InputMode);
+
+        UE_LOG(LogTemp, Warning, TEXT("LobbyUI displayed!"));
+    }
+}
+
+void AT2BaseController::HideLobbyUI()
+{
+    if (LobbyWidgetInstance && LobbyWidgetInstance->IsInViewport())
+    {
+        LobbyWidgetInstance->RemoveFromParent();
+    }
+    LobbyWidgetInstance = nullptr;
+}
 void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
@@ -49,14 +169,34 @@ void AT2BaseController::OnPossess(APawn* InPawn)
 
     if (IsLocalPlayerController())
     {
+        // 새 Pawn을 Possess하면 바인딩 다시 확인
         BindRoleChangedDelegate();
 
         if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
         {
-            UE_LOG(LogTemp, Warning, TEXT("OnPossess: Role = %d"), (int32)PS->PlayerRole);
+            UE_LOG(LogTemp, Warning, TEXT("OnPossess: Role = %d, CurrentDisplayedRole = %d"),
+                (int32)PS->PlayerRole, (int32)CurrentDisplayedRole);
 
             if (PS->PlayerRole != EPlayerRole::None)
             {
+                // 새 Pawn Possess 시 항상 HUD 재생성
+                HideAllHUD();
+
+                // 기존 HUD 인스턴스 완전히 제거
+                if (SurvivorHUDInstance)
+                {
+                    SurvivorHUDInstance->RemoveFromParent();
+                    SurvivorHUDInstance = nullptr;
+                }
+                if (KillerHUDInstance)
+                {
+                    KillerHUDInstance->RemoveFromParent();
+                    KillerHUDInstance = nullptr;
+                }
+
+                bHUDInitialized = false;
+                CurrentDisplayedRole = EPlayerRole::None;
+
                 UpdateHUDForRole(PS->PlayerRole);
             }
         }
@@ -67,29 +207,68 @@ void AT2BaseController::OnPossess(APawn* InPawn)
 
 void AT2BaseController::BindRoleChangedDelegate()
 {
-    if (bDelegateBound) return;
+    if (!IsLocalPlayerController()) return;
 
-    if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
+    AT2PlayerState* PS = GetPlayerState<AT2PlayerState>();
+    if (!PS) return;
+
+    // 이미 같은 PlayerState에 바인딩되어 있으면 스킵
+    if (bDelegateBound && BoundPlayerState == PS)
     {
-        PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
-        bDelegateBound = true;
-        UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate:  Delegate bound! "));
+        return;
     }
+
+    // 다른 PlayerState에 바인딩되어 있으면 해제
+    if (bDelegateBound && BoundPlayerState && BoundPlayerState != PS)
+    {
+        BoundPlayerState->OnPlayerRoleChanged.RemoveDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
+        UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate: Unbound from %s"), *BoundPlayerState->GetName());
+        bDelegateBound = false;
+    }
+
+    PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
+    BoundPlayerState = PS;
+    bDelegateBound = true;
+    UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate: Delegate bound to %s"), *PS->GetName());
 }
 
 void AT2BaseController::SetupInputComponent()
 {
     Super::SetupInputComponent();
 
-    // ★ ESC 키 바인딩
+
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AT2BaseController::ToggleSettingsMenu);
 }
 
 void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
 {
-    if (!IsLocalPlayerController()) return;
-    if (NewRole == EPlayerRole::None) return;
-    if (bHUDInitialized && CurrentDisplayedRole == NewRole) return;
+    if (!IsLocalPlayerController())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole:  Not local controller, skipping"));
+        return;
+    }
+
+    if (NewRole == EPlayerRole::None)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role is None, skipping"));
+        return;
+    }
+
+    // 자기 PlayerState의 Role과 일치하는지 확인
+    if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
+    {
+        if (PS->PlayerRole != NewRole)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role mismatch (PS=%d, NewRole=%d), skipping"),
+                (int32)PS->PlayerRole, (int32)NewRole);
+            return;
+        }
+    }
+
+    if (bHUDInitialized && CurrentDisplayedRole == NewRole)
+    {
+        return;
+    }
 
     CurrentDisplayedRole = NewRole;
     bHUDInitialized = true;
@@ -108,7 +287,6 @@ void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
         ShowSurvivorHUD();
     }
 }
-
 void AT2BaseController::ShowKillerHUD()
 {
     if (!KillerHUDWidgetClass)
@@ -168,11 +346,43 @@ void AT2BaseController::HideAllHUD()
 
 void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 {
-    UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged Delegate Called!  Role: %d"), (int32)NewRole);
+    if (!IsLocalPlayerController()) return;
+
+    // 자기 PlayerState의 Role과 일치하는지 확인
+    AT2PlayerState* MyPS = GetPlayerState<AT2PlayerState>();
+    if (!MyPS)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: MyPS is null, skipping"));
+        return;
+    }
+
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: No Pawn yet, skipping"));
+        return;
+    }
+
+
+    if (MyPawn->GetClass()->GetName().Contains(TEXT("DefaultPawn")))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Still DefaultPawn, skipping"));
+        return;
+    }
+
+    if (MyPS->PlayerRole != NewRole)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Role mismatch, skipping (MyRole=%d, NewRole=%d)"),
+            (int32)MyPS->PlayerRole, (int32)NewRole);
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Role = %d, Pawn = %s"),
+        (int32)NewRole, *MyPawn->GetName());
     UpdateHUDForRole(NewRole);
 }
 
-// ★★★ ESC 설정창 토글 ★★★
+
 void AT2BaseController::ToggleSettingsMenu()
 {
     UE_LOG(LogTemp, Warning, TEXT("ESC Pressed - ToggleSettingsMenu"));
@@ -189,7 +399,7 @@ void AT2BaseController::ToggleSettingsMenu()
     }
 }
 
-// ★★★ 설정창 열기 ★★★
+
 void AT2BaseController::OpenSettingsMenu()
 {
     if (!SettingsMenuWidgetClass)
@@ -218,8 +428,26 @@ void AT2BaseController::OpenSettingsMenu()
         UE_LOG(LogTemp, Warning, TEXT("Settings Menu Opened!"));
     }
 }
+void AT2BaseController::ServerRequestStartGame_Implementation()
+{
+    // 서버에서만 실행
+    if (AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>())
+    {
+        GM->TryStartGame();
+    }
+}
+void AT2BaseController::Client_OnGameStarted_Implementation()
+{
+    HideLobbyUI();
+    HideTitleUI();
 
-// ★★★ 설정창 닫기 ★★★
+    bShowMouseCursor = false;
+    FInputModeGameOnly InputMode;
+    SetInputMode(InputMode);
+
+    UE_LOG(LogTemp, Warning, TEXT("Client:  Game Started!"));
+}
+
 void AT2BaseController::CloseSettingsMenu()
 {
     if (SettingsMenuInstance && SettingsMenuInstance->IsInViewport())
@@ -237,7 +465,6 @@ void AT2BaseController::CloseSettingsMenu()
     UE_LOG(LogTemp, Warning, TEXT("Settings Menu Closed!"));
 }
 
-// ★★★ 게임 나가기 (블루프린트에서 버튼에 연결) ★★★
 void AT2BaseController::RequestLeaveGame()
 {
     UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame called! "));

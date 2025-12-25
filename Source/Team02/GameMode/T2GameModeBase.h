@@ -52,7 +52,8 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "Camera")
     float CameraBlendTime = 1.0f;
-
+    UPROPERTY(BlueprintReadOnly, Category = "Lobby")
+    bool bInLobby = true;
 private:
     UPROPERTY()
     UUserWidget* CurrentWidget;
