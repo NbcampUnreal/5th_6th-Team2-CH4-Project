@@ -71,6 +71,15 @@ public:
 
 	void UpdateInteractTarget();
 
+	void HandleUseSlot1(const FInputActionValue& InValue);
+	void HandleUseSlot2(const FInputActionValue& InValue);
+	void HandleUseSlot3(const FInputActionValue& InValue);
+	void HandleUseSlot4(const FInputActionValue& InValue);
+	void HandleUseSlot5(const FInputActionValue& InValue);
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseInventorySlot(int32 SlotIndex);
+
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -106,8 +115,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> InteractInput;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> UseSlot1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> UseSlot2;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> UseSlot3;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> UseSlot4;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> UseSlot5;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<AItemBase> CurrentInteractItem;
+
+
 
 	UPROPERTY()
 	TSet<TObjectPtr<AItemBase>> NearbyItems;

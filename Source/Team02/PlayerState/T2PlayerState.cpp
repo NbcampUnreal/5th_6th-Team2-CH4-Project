@@ -1,7 +1,5 @@
 #include "PlayerState/T2PlayerState.h"
 #include "Net/UnrealNetwork.h"
-#include "Gimmick/Player/ItemBase.h"
-#include "EngineUtils.h"
 
 AT2PlayerState::AT2PlayerState()
 {
@@ -26,13 +24,5 @@ void AT2PlayerState::SetPlayerRole(EPlayerRole NewRole)
 void AT2PlayerState::OnRep_PlayerRole()
 {
     OnPlayerRoleChanged.Broadcast(PlayerRole);
-
-    if (PlayerRole == EPlayerRole::Killer)
-    {
-        for (TActorIterator<AItemBase> It(GetWorld()); It; ++It)
-        {
-            It->HideForLocalPlayer();
-        }
-    }
 
 }

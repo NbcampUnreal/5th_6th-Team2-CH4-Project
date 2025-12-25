@@ -10,6 +10,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
+#include "PlayerState/Player/InventoryComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameMode/T2GameModeBase.h"
@@ -149,6 +150,11 @@ void AT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		EIC->BindAction(InteractInput, ETriggerEvent::Started, this, &ThisClass::OnInteractStart);
 		EIC->BindAction(InteractInput, ETriggerEvent::Completed, this, &ThisClass::OnInteractCompleted);
 		EIC->BindAction(InteractInput, ETriggerEvent::Canceled, this, &ThisClass::OnInteractCanceled);
+		EIC->BindAction(UseSlot1, ETriggerEvent::Started, this, &ThisClass::HandleUseSlot1);
+		EIC->BindAction(UseSlot2, ETriggerEvent::Started, this, &ThisClass::HandleUseSlot2);
+		EIC->BindAction(UseSlot3, ETriggerEvent::Started, this, &ThisClass::HandleUseSlot3);
+		EIC->BindAction(UseSlot4, ETriggerEvent::Started, this, &ThisClass::HandleUseSlot4);
+		EIC->BindAction(UseSlot5, ETriggerEvent::Started, this, &ThisClass::HandleUseSlot5);
 	}
 }
 
@@ -375,6 +381,7 @@ void AT2PlayerCharacter::OnInteractCanceled()
 	if (!bIsInteracting) return;
 
 	bIsInteracting = false;
+	CurrentInteractTime = 0.f;
 
 	if (AT2BaseController* PC = Cast<AT2BaseController>(GetController()))
 	{
@@ -463,4 +470,37 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 	}
 
 	CurrentInteractItem = nullptr;
+}
+
+void AT2PlayerCharacter::HandleUseSlot1(const FInputActionValue& InValue)
+{
+	Server_UseInventorySlot(0);
+}
+
+void AT2PlayerCharacter::HandleUseSlot2(const FInputActionValue& InValue)
+{
+	Server_UseInventorySlot(1);
+}
+
+void AT2PlayerCharacter::HandleUseSlot3(const FInputActionValue& InValue)
+{
+	Server_UseInventorySlot(2);
+}
+
+void AT2PlayerCharacter::HandleUseSlot4(const FInputActionValue& InValue)
+{
+	Server_UseInventorySlot(3);
+}
+
+void AT2PlayerCharacter::HandleUseSlot5(const FInputActionValue& InValue)
+{
+	Server_UseInventorySlot(4);
+}
+
+void AT2PlayerCharacter::Server_UseInventorySlot_Implementation(int32 SlotIndex)
+{
+	ASurvivorPlayerState* PS = GetPlayerState<ASurvivorPlayerState>();
+	if (!PS || !PS->InventoryComponent) return;
+
+	PS->InventoryComponent->UseSlot(SlotIndex);
 }
