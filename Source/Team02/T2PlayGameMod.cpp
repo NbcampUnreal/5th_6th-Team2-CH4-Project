@@ -62,7 +62,17 @@ void AT2PlayGameMod::AssignRolesIfReady()
         ShuffledPlayers.Swap(i, j);
     }
 
+    // 스폰 포인트 미리 가져오기
+    TArray<AActor*> KillerSpawnPoints;
+    TArray<AActor*> SurvivorSpawnPoints;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("KillerSpawn"), KillerSpawnPoints);
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SurvivorSpawn"), SurvivorSpawnPoints);
+
+    UE_LOG(LogTemp, Warning, TEXT("Found %d KillerSpawn, %d SurvivorSpawn points"),
+        KillerSpawnPoints.Num(), SurvivorSpawnPoints.Num());
+
     int32 SurvivorCount = 0;
+    int32 SurvivorSpawnIndex = 0;
 
     for (int32 i = 0; i < ShuffledPlayers.Num(); ++i)
     {
@@ -73,15 +83,28 @@ void AT2PlayGameMod::AssignRolesIfReady()
         if (!PS) continue;
 
         EPlayerRole AssignedRole;
+        AActor* SpawnPoint = nullptr;
+        UClass* PawnClass = nullptr;
 
         if (i == 0)
         {
             AssignedRole = EPlayerRole::Killer;
+            PawnClass = KillerClass;
+            if (KillerSpawnPoints.Num() > 0)
+            {
+                SpawnPoint = KillerSpawnPoints[FMath::RandRange(0, KillerSpawnPoints.Num() - 1)];
+            }
         }
         else
         {
             AssignedRole = EPlayerRole::Survivor;
+            PawnClass = SurvivorClass;
             SurvivorCount++;
+            if (SurvivorSpawnPoints.Num() > 0)
+            {
+                SpawnPoint = SurvivorSpawnPoints[SurvivorSpawnIndex % SurvivorSpawnPoints.Num()];
+                SurvivorSpawnIndex++;
+            }
         }
 
         PS->SetPlayerRole(AssignedRole);
@@ -94,22 +117,53 @@ void AT2PlayGameMod::AssignRolesIfReady()
         APawn* OldPawn = PC->GetPawn();
         if (OldPawn)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Player %d:  Destroying old pawn:  %s"), i, *OldPawn->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("Player %d: Destroying old pawn:  %s"), i, *OldPawn->GetName());
             PC->UnPossess();
             OldPawn->Destroy();
         }
 
-        RestartPlayer(PC);
-
-        APawn* NewPawn = PC->GetPawn();
-        if (NewPawn)
+        // 직접 스폰
+        if (SpawnPoint && PawnClass)
         {
-            NewPawn->EnableInput(PC);
-            UE_LOG(LogTemp, Warning, TEXT("Player %d: NewPawn = %s"), i, *NewPawn->GetName());
+            FVector SpawnLocation = SpawnPoint->GetActorLocation();
+            FRotator SpawnRotation = SpawnPoint->GetActorRotation();
+
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+            APawn* NewPawn = GetWorld()->SpawnActor<APawn>(
+                PawnClass,
+                SpawnLocation,
+                SpawnRotation,
+                SpawnParams
+            );
+
+            if (NewPawn)
+            {
+                PC->Possess(NewPawn);
+                NewPawn->EnableInput(PC);
+                UE_LOG(LogTemp, Warning, TEXT("Player %d:  Spawned at %s (%s), NewPawn = %s"),
+                    i,
+                    *SpawnPoint->GetName(),
+                    AssignedRole == EPlayerRole::Killer ? TEXT("KillerSpawn") : TEXT("SurvivorSpawn"),
+                    *NewPawn->GetName());
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Player %d: Failed to spawn pawn! "), i);
+            }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("Player %d: NO PAWN AFTER RESTART! "), i);
+            // 스폰 포인트나 클래스 없으면 기존 방식
+            UE_LOG(LogTemp, Warning, TEXT("Player %d: No spawn point or class, using RestartPlayer"), i);
+            RestartPlayer(PC);
+            APawn* NewPawn = PC->GetPawn();
+            if (NewPawn)
+            {
+                NewPawn->EnableInput(PC);
+                UE_LOG(LogTemp, Warning, TEXT("Player %d: NewPawn = %s (fallback)"), i, *NewPawn->GetName());
+            }
         }
 
         FInputModeGameOnly InputMode;
@@ -123,12 +177,11 @@ void AT2PlayGameMod::AssignRolesIfReady()
     {
         GS->TotalSurvivors = SurvivorCount;
         GS->SurvivorsAlive = SurvivorCount;
-        UE_LOG(LogTemp, Warning, TEXT("GameState:  TotalSurvivors=%d, SurvivorsAlive=%d"), SurvivorCount, SurvivorCount);
+        UE_LOG(LogTemp, Warning, TEXT("GameState: TotalSurvivors=%d, SurvivorsAlive=%d"), SurvivorCount, SurvivorCount);
     }
 
     UE_LOG(LogTemp, Warning, TEXT("Roles assigned - Killer: 1, Survivors: %d"), SurvivorCount);
 }
-
 void AT2PlayGameMod::Logout(AController* Exiting)
 {
     APlayerController* PC = Cast<APlayerController>(Exiting);
@@ -179,19 +232,28 @@ AActor* AT2PlayGameMod::ChoosePlayerStart_Implementation(AController* Player)
     EPlayerRole InRole = GetPlayerRole(Player);
     FName SpawnTag = (InRole == EPlayerRole::Killer) ? FName("KillerSpawn") : FName("SurvivorSpawn");
 
+    UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart:  Role = %d, Tag = %s"),
+        (int32)InRole, *SpawnTag.ToString());
+
     TArray<AActor*> SpawnPoints;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), SpawnTag, SpawnPoints);
+
+    UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart: Found %d spawn points with tag %s"),
+        SpawnPoints.Num(), *SpawnTag.ToString());
 
     if (SpawnPoints.Num() > 0)
     {
         int32 Index = FMath::RandRange(0, SpawnPoints.Num() - 1);
+        UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart: Using spawn point %s"),
+            *SpawnPoints[Index]->GetName());
         return SpawnPoints[Index];
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart: No spawn points found, using default"));
     return Super::ChoosePlayerStart_Implementation(Player);
 }
 
-// ★★★ 팀원이 요청한 함수: 캐릭터 사망 처리 ★★★
+
 void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
 {
     if (!HasAuthority()) return;
@@ -250,7 +312,7 @@ void AT2PlayGameMod::CheckWinConditions()
     UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
         GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
 
-    // ★ 모든 생존자가 죽거나 탈출했을 때만 게임 종료
+    // 모든 생존자가 죽거나 탈출했을 때만 게임 종료
     if (GS->SurvivorsAlive <= 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("No survivors alive! "));

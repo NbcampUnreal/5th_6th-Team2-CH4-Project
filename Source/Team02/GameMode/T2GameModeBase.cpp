@@ -62,20 +62,30 @@ void AT2GameModeBase::TryStartGame()
 {
     if (!HasAuthority())
     {
-        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not server! "));
+        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not server!"));
         return;
     }
 
     if (!CanStartGame())
     {
-        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not enough players (%d/%d)"),
+        UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Not enough players (%d/%d)"),
             GetNumPlayers(), RequiredPlayers);
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players! "), GetNumPlayers());
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Starting with %d players! "), GetNumPlayers());
 
-    // ServerTravel�� ��� Ŭ���̾�Ʈ�� �Բ� �̵�
+    bInLobby = false;  // 추가
+
+    // 모든 클라이언트에게 게임 시작 알림
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (AT2BaseController* PC = Cast<AT2BaseController>(It->Get()))
+        {
+            PC->Client_OnGameStarted();
+        }
+    }
+
     GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Library_Pack/Maps/%s? listen"), *GamePlayMapName.ToString()));
 }
 

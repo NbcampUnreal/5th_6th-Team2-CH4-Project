@@ -44,7 +44,10 @@ private:
 
     FDelegateHandle HPChangedHandle;
     FDelegateHandle BatteryChangedHandle;
+
     bool bIsBound = false;
+    bool bIsHPBound = false;
+    bool bIsBatteryBound = false;
 
 #pragma region Inventory UI
 public:

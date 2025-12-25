@@ -20,8 +20,9 @@ void AT2GameStateBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AT2GameStateBase, TotalKeyCount);
-}
+	DOREPLIFETIME(AT2GameStateBase, RequiredPlayers);
 
+}
 int32 AT2GameStateBase::GetAliveSurvivorCount() const
 {
 	int32 AliveCount = 0;
@@ -37,6 +38,8 @@ int32 AT2GameStateBase::GetAliveSurvivorCount() const
 
 	return AliveCount;
 }
+
+
 
 int32 AT2GameStateBase::GetEscapedSurvivorCount() const
 {

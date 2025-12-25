@@ -14,12 +14,8 @@ void UUW_SurvivorHUD::NativeConstruct()
 
     if (HP)
     {
-
         HP->SetFillColorAndOpacity(FLinearColor(0.9f, 0.0f, 0.0f, 1.f));
-
-
         HP->SetPercent(1.0f);
-
         UE_LOG(LogTemp, Warning, TEXT("HP ProgressBar found"));
     }
 
@@ -42,7 +38,7 @@ void UUW_SurvivorHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
-    if (!bIsBound)
+    if (!bIsHPBound || !bIsBatteryBound)
     {
         TryBindToPlayerState();
     }
@@ -50,29 +46,41 @@ void UUW_SurvivorHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void UUW_SurvivorHUD::TryBindToPlayerState()
 {
-    if (bIsBound) return;
-
     APlayerController* PC = GetOwningPlayer();
     if (!PC) return;
 
-    ASurvivorPlayerState* PS = PC->GetPlayerState<ASurvivorPlayerState>();
-    if (!PS) return;
- 
-    APawn* Pawn = Cast<APawn>(PC->GetPawn());
-    if (!Pawn) return;
-  
-    UFlashlightComponent* FL = Cast<UFlashlightComponent>(Pawn->FindComponentByClass<UFlashlightComponent>());
-   
-    if (!FL) return;
+    // HP 바인딩 (PlayerState만 있으면 됨)
+    if (!bIsHPBound)
+    {
+        ASurvivorPlayerState* PS = PC->GetPlayerState<ASurvivorPlayerState>();
+        if (PS)
+        {
+            HPChangedHandle = PS->OnHPChanged.AddUObject(this, &UUW_SurvivorHUD::UpdateHP);
+            bIsHPBound = true;
+            UpdateHP(PS->CurrentHP, PS->MaxHP);
+            UE_LOG(LogTemp, Warning, TEXT("HP Binding SUCCESS"));
+        }
+    }
 
-    HPChangedHandle = PS->OnHPChanged.AddUObject(this, &UUW_SurvivorHUD::UpdateHP);
-    BatteryChangedHandle = FL->OnBatteryChanged.AddUObject(this, &UUW_SurvivorHUD::UpdateBattery);
-    bIsBound = true;
+    // Battery 바인딩 (Pawn + FlashlightComponent 필요)
+    if (!bIsBatteryBound)
+    {
+        APawn* Pawn = PC->GetPawn();
+        if (Pawn)
+        {
+            UFlashlightComponent* FL = Pawn->FindComponentByClass<UFlashlightComponent>();
+            if (FL)
+            {
+                BatteryChangedHandle = FL->OnBatteryChanged.AddUObject(this, &UUW_SurvivorHUD::UpdateBattery);
+                bIsBatteryBound = true;
+                UpdateBattery(FL->CurrentBattery, FL->MaxBattery);
+                UE_LOG(LogTemp, Warning, TEXT("Battery Binding SUCCESS"));
+            }
+        }
+    }
 
-    UpdateHP(PS->CurrentHP, PS->MaxHP);
-    UpdateBattery(FL->CurrentBattery, FL->MaxBattery);
-
-    UE_LOG(LogTemp, Warning, TEXT("HP Binding SUCCESS"));
+    // 둘 다 바인딩 되면 bIsBound = true
+    bIsBound = bIsHPBound && bIsBatteryBound;
 }
 
 void UUW_SurvivorHUD::NativeDestruct()
@@ -84,17 +92,18 @@ void UUW_SurvivorHUD::NativeDestruct()
         {
             PS->OnHPChanged.Remove(HPChangedHandle);
         }
-    }
-    APawn* Pawn = Cast<APawn>(PC->GetPawn());
-    if (IsValid(Pawn) == true)
-    {
-        UFlashlightComponent* FL = Cast<UFlashlightComponent>(Pawn->FindComponentByClass<UFlashlightComponent>());
-        if (IsValid(FL) == true)
+
+        APawn* Pawn = PC->GetPawn();
+        if (Pawn)
         {
-            FL->OnBatteryChanged.Remove(BatteryChangedHandle);
+            UFlashlightComponent* FL = Pawn->FindComponentByClass<UFlashlightComponent>();
+            if (FL)
+            {
+                FL->OnBatteryChanged.Remove(BatteryChangedHandle);
+            }
         }
     }
-    
+
     Super::NativeDestruct();
 }
 
@@ -150,7 +159,6 @@ void UUW_SurvivorHUD::Init(ASurvivorPlayerState* PS)
     if (PS->InventoryComponent)
     {
         PS->InventoryComponent->OnInventoryUpdated.AddDynamic(this, &UUW_SurvivorHUD::RefreshInventory);
-
         RefreshInventory();
     }
 }
@@ -174,9 +182,7 @@ void UUW_SurvivorHUD::RefreshInventory()
         if (!DT) return;
 
         const FName RowName = Items[i].ItemID;
-
         const FItemData* ItemData = DT->FindRow<FItemData>(RowName, TEXT("InventoryUI"));
-
 
         if (ItemData && ItemData->Icon)
         {
