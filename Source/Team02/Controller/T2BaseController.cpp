@@ -19,14 +19,13 @@ void AT2BaseController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 로컬 플레이어면 타이틀 UI 표시
     if (IsLocalPlayerController())
     {
-        // 타이틀 맵인지 확인 (Example 맵)
         FString MapName = GetWorld()->GetMapName();
         MapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
 
-        if (MapName.Contains(TEXT("Example")) && !MapName.Contains(TEXT("Example1")))
+
+        if (MapName.Contains(TEXT("title")))
         {
             ShowTitleUI();
         }
@@ -38,6 +37,8 @@ void AT2BaseController::BeginPlay()
 void AT2BaseController::ShowTitleUI()
 {
     if (!IsLocalPlayerController()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  Started"));
 
     if (!TitleWidgetClass)
     {
@@ -66,15 +67,22 @@ void AT2BaseController::ShowTitleUI()
 
         if (FoundCameras.Num() > 0)
         {
-            SetViewTargetWithBlend(FoundCameras[0], 0.0f);
-            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI: Set view to %s"), *FoundCameras[0]->GetName());
+            AActor* CameraActor = FoundCameras[0];
+            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  Camera Actor = %s"), *CameraActor->GetName());
+
+            // Pawn 체크
+            APawn* MyPawn = GetPawn();
+            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  MyPawn = %s"), MyPawn ? *MyPawn->GetName() : TEXT("NULL"));
+
+            SetViewTargetWithBlend(CameraActor, 0.0f);
+            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  SetViewTargetWithBlend called"));
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("ShowTitleUI:  No TitleCamera found!  Add 'TitleCamera' tag to camera actor. "));
+            UE_LOG(LogTemp, Error, TEXT("ShowTitleUI:  No TitleCamera found!"));
         }
 
-        UE_LOG(LogTemp, Warning, TEXT("TitleUI displayed! "));
+        UE_LOG(LogTemp, Warning, TEXT("TitleUI displayed!"));
     }
 }
 
@@ -465,18 +473,15 @@ void AT2BaseController::CloseSettingsMenu()
 
 void AT2BaseController::RequestLeaveGame()
 {
-    UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame called! "));
+    UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame called!"));
 
-    // 서버(호스트)인 경우 - 나가면 모두 튕김
     if (HasAuthority() && GetNetMode() == NM_ListenServer)
     {
         UE_LOG(LogTemp, Warning, TEXT("Server is leaving - all players will disconnect"));
     }
-
-    // 로비/타이틀로 이동
     if (UWorld* World = GetWorld())
     {
-        UGameplayStatics::OpenLevel(World, TEXT("/Game/Library_Pack/Maps/Example"));
+        UGameplayStatics::OpenLevel(World, TEXT("/Game/Team02/Blueprint/map/title"));
     }
 }
 
