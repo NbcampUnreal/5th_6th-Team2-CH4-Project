@@ -34,7 +34,7 @@ public:
     virtual void Logout(AController* Exiting) override;
 
     void OnPlayerDead(AT2PlayerCharacter* DeadCharacter);
-
+    virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 protected:
     virtual void BeginPlay() override;
 
@@ -44,8 +44,8 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UUserWidget> LobbyWidgetClass;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Game")
-    FName GamePlayMapName = "Example1";
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game")
+    FName GamePlayMapName = FName("MedievalVillageNight");
 
     UPROPERTY(EditDefaultsOnly, Category = "Game")
     int32 RequiredPlayers = 3;
@@ -54,6 +54,7 @@ protected:
     float CameraBlendTime = 1.0f;
     UPROPERTY(BlueprintReadOnly, Category = "Lobby")
     bool bInLobby = true;
+    bool bIsTitleMap = false;
 private:
     UPROPERTY()
     UUserWidget* CurrentWidget;
