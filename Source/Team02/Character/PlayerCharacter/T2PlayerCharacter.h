@@ -133,6 +133,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<AItemBase> CurrentInteractItem;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	TObjectPtr<AItemBase> HighlightedItem;
 
 
 	UPROPERTY()

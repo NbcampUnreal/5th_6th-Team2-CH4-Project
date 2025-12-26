@@ -454,11 +454,26 @@ void AT2PlayerCharacter::UpdateInteractTarget()
 		{
 			if (NearbyItems.Contains(HitItem))
 			{
+				if (HighlightedItem && HighlightedItem != HitItem)
+				{
+					HighlightedItem->SetOutlineEnabled(false);
+				}
+
+				HitItem->SetOutlineEnabled(true);
+
+				HighlightedItem = HitItem;
 				CurrentInteractItem = HitItem;
 				return;
 			}
 		}
 	}
+
+	if (HighlightedItem)
+	{
+		HighlightedItem->SetOutlineEnabled(false);
+		HighlightedItem = nullptr;
+	}
+
 	if (bIsInteracting)
 	{
 		OnInteractCanceled();

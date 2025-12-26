@@ -12,8 +12,6 @@ class TEAM02_API AFlashlightBattery : public AItemBase
 public:	
 	AFlashlightBattery();
 
-	void UseBattery();
-
 protected:
 	virtual void BeginPlay() override;
 
