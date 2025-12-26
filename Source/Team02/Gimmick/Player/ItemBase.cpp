@@ -35,13 +35,6 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("[%s] Role=%d Replicated ItemID=%s"),
-		*GetName(),
-		(int32)GetLocalRole(),
-		*ItemID.ToString()
-	);
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -81,8 +74,6 @@ void AItemBase::OnOverlapEnd(
 			PC->StopInteractUI();
 		}
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("OverlapEnd"));
 }
 
 void AItemBase::BeginInteract(AT2PlayerCharacter* Player)

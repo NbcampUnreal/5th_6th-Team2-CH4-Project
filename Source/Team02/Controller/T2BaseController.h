@@ -46,9 +46,6 @@ public:
 
     bool bInteractUIActive = false;
 
-    UFUNCTION(Client, Reliable)
-    void Client_ApplyItemVisibility();
-
 protected:
     virtual void SetupInputComponent() override;
 

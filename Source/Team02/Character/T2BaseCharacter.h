@@ -22,7 +22,6 @@ public:
 	// ¡Ú Ãß°¡
 	virtual void PossessedBy(AController* NewController) override;
 
-	void ApplyItemVisibilityByTag();
 
 protected:
 	virtual void BeginPlay() override;

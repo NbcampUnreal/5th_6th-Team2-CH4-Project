@@ -201,8 +201,6 @@ void AT2BaseController::OnPossess(APawn* InPawn)
             }
         }
     }
-
-    Client_ApplyItemVisibility();
 }
 
 void AT2BaseController::BindRoleChangedDelegate()
@@ -523,17 +521,4 @@ void AT2BaseController::StopInteractUI()
 
     InteractMID = nullptr;
     bInteractUIActive = false;
-}
-
-void AT2BaseController::Client_ApplyItemVisibility_Implementation()
-{
-    APawn* PossessedPawn = GetPawn();
-    if (!PossessedPawn) return;
-
-    if (!PossessedPawn->ActorHasTag("Killer")) return;
-
-    for (TActorIterator<AItemBase> It(GetWorld()); It; ++It)
-    {
-        It->HideForLocalPlayer();
-    }
 }

@@ -75,18 +75,6 @@ void AT2BaseCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
     }
 }
 
-void AT2BaseCharacter::ApplyItemVisibilityByTag()
-{
-    if (!IsLocallyControlled()) return;
-
-    if (!ActorHasTag("Killer")) return;
-
-    for (TActorIterator<AItemBase> It(GetWorld()); It; ++It)
-    {
-        It->HideForLocalPlayer();
-    }
-}
-
 void AT2BaseCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
