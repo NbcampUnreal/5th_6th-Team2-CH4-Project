@@ -28,6 +28,8 @@ public:
 
 	void DebugDrawCapsule();
 
+	void SetOutlineEnabled(bool bEnable);
+
 	UFUNCTION()
 	void OnRep_InteractingPC();
 
@@ -67,5 +69,4 @@ protected:
 
 	UPROPERTY(ReplicatedUsing=OnRep_InteractingPC)
 	TObjectPtr<AT2BaseController> InteractingPC;
-
 };

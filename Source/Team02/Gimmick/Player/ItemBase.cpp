@@ -23,7 +23,8 @@ AItemBase::AItemBase()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
+	MeshComponent->SetRenderCustomDepth(true);
+	MeshComponent->CustomDepthStencilValue = 1;
 } 
 
 void AItemBase::BeginPlay()
@@ -35,6 +36,7 @@ void AItemBase::BeginPlay()
 		InteractiongBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 		InteractiongBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 	}
+	SetOutlineEnabled(false);
 }
 
 void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -136,6 +138,14 @@ void AItemBase::HideForLocalPlayer()
 	}
 }
 
+void AItemBase::SetOutlineEnabled(bool bEnable)
+{
+	if (!MeshComponent) return;
+
+	MeshComponent->SetRenderCustomDepth(bEnable);
+
+}
+
 //Box Component Range TEST
 void AItemBase::DebugDrawCapsule()
 {
@@ -157,5 +167,6 @@ void AItemBase::DebugDrawCapsule()
 	//	2.f
 	//);
 }
+
 
 
