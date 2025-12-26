@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameState/T2GameStateBase.h"
 #include "T2PlayGameState.generated.h"
 
 UENUM(BlueprintType)
@@ -23,13 +23,10 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    // ========== °æ±â ÁøÇà »óÅÂ ==========
+    // ========== ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ==========
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
-    int32 RequiredKeys = 3;
-
-    UPROPERTY(ReplicatedUsing = OnRep_CollectedKeys, BlueprintReadOnly, Category = "Match")
-    int32 CollectedKeys = 0;
+    int32 RequiredKeys = 6;
 
     UPROPERTY(ReplicatedUsing = OnRep_EscapeGateOpen, BlueprintReadOnly, Category = "Match")
     bool bEscapeGateOpen = false;
@@ -46,11 +43,25 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_MatchResult, BlueprintReadOnly, Category = "Match")
     EMatchResult MatchResult = EMatchResult::None;
 
-    // ========== ¼­¹ö Àü¿ë ÇÔ¼ö ==========
-
+    // ========== ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ ==========
+    UPROPERTY(ReplicatedUsing = OnRep_KeyCount, BlueprintReadOnly, Category = "Keys")
+    int32 TotalKeyCount = 0;
 
     UFUNCTION(BlueprintCallable, Category = "Key")
     void AddKeyCount(int32 Amount = 1);
+
+    UFUNCTION()
+    void OnRep_KeyCount();
+
+    UFUNCTION(BlueprintCallable, Category = "Keys")
+    int32 GetKeyCount() const { return TotalKeyCount; }
+
+    UFUNCTION(BlueprintCallable, Category = "Match")
+    int32 GetAliveSurvivorCount() const { return SurvivorsAlive; }
+
+    UFUNCTION(BlueprintCallable, Category = "Match")
+    int32 GetEscapedSurvivorCount() const { return SurvivorsEscaped; }
+
 
 
     void AddCollectedKey();

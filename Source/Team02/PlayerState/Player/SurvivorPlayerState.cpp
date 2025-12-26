@@ -2,11 +2,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Character/PlayerCharacter/T2PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "T2PlayGameState.h"
+#include "T2PlayGameState.h"  
 #include "Kismet/GameplayStatics.h"
-#include "T2PlayGameMod.h"
-#include "T2PlayGameState.h"
-#include "GameState/T2GameStateBase.h"
 #include "PlayerState/Player/InventoryComponent.h"
 
 ASurvivorPlayerState::ASurvivorPlayerState()
@@ -171,7 +168,7 @@ void ASurvivorPlayerState::SetEscaped()
 
 	bIsEscaped = true;
 
-	if (AT2GameStateBase* GS = GetWorld()->GetGameState<AT2GameStateBase>())
+	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
 	{
 		GS->OnSurvivorEscaped();
 	}

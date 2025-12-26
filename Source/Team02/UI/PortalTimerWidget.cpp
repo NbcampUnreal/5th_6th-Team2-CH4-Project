@@ -4,7 +4,7 @@
 #include "UI/PortalTimerWidget.h"
 #include "Gimmick/Portal/PortalActor.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameState/T2GameStateBase.h"
+#include "T2PlayGameState.h"
 
 void UPortalTimerWidget::NativeConstruct()
 {
@@ -34,7 +34,7 @@ FText UPortalTimerWidget::GetPortalTimeText() const
 FText UPortalTimerWidget::GetPlayersEnteredText() const
 {
 	APortalActor* Portal = FindActivePortal();
-	AT2GameStateBase* GS = GetWorld()->GetGameState<AT2GameStateBase>();
+	AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
 	
 	if (!Portal || !GS)
 	{

@@ -1,4 +1,6 @@
 #include "T2PlayGameState.h"
+
+#include "T2PlayGameMod.h"
 #include "Net/UnrealNetwork.h"
 
 AT2PlayGameState::AT2PlayGameState()
@@ -9,8 +11,8 @@ void AT2PlayGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+    DOREPLIFETIME(AT2PlayGameState, TotalKeyCount);
     DOREPLIFETIME(AT2PlayGameState, RequiredKeys);
-    DOREPLIFETIME(AT2PlayGameState, CollectedKeys);
     DOREPLIFETIME(AT2PlayGameState, bEscapeGateOpen);
     DOREPLIFETIME(AT2PlayGameState, TotalSurvivors);
     DOREPLIFETIME(AT2PlayGameState, SurvivorsAlive);
@@ -23,15 +25,25 @@ void AT2PlayGameState::AddKeyCount(int32 Amount)
 {
     if (GetLocalRole() != ROLE_Authority) return;
 
-    CollectedKeys += Amount;
+    TotalKeyCount += Amount;
 
-    UE_LOG(LogTemp, Warning, TEXT("Key Collected!  Total:  %d / %d"), CollectedKeys, RequiredKeys);
+    UE_LOG(LogTemp, Warning, TEXT("Key Collected!  Total:  %d / %d"), TotalKeyCount, RequiredKeys);
 
+    if (AT2PlayGameMod* GM = Cast<AT2PlayGameMod>(GetWorld()->GetAuthGameMode()))
+    {
+        GM->OnKeyCollected(TotalKeyCount);
+    }
+    
     // ���� �� ������ Ż�⹮ ����
-    if (CollectedKeys >= RequiredKeys)
+    if (TotalKeyCount >= RequiredKeys)
     {
         SetEscapeGateOpen(true);
     }
+}
+
+void AT2PlayGameState::OnRep_KeyCount()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Keys: %d / %d (Gate)"), TotalKeyCount, RequiredKeys);
 }
 
 // ���� �Լ� (AddKeyCount ȣ��)
@@ -60,6 +72,11 @@ void AT2PlayGameState::SetEscapeGateOpen(bool bOpen)
     if (GetLocalRole() != ROLE_Authority) return;
 
     bEscapeGateOpen = bOpen;
+    
+    if (bOpen)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Escape Gate OPENED!"));
+    }
 }
 
 void AT2PlayGameState::SetMatchResult(EMatchResult Result)
@@ -71,7 +88,7 @@ void AT2PlayGameState::SetMatchResult(EMatchResult Result)
 
 void AT2PlayGameState::OnRep_CollectedKeys()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Keys Collected:  %d / %d"), CollectedKeys, RequiredKeys);
+    UE_LOG(LogTemp, Warning, TEXT("Keys Collected:  %d / %d"), TotalKeyCount, RequiredKeys);
 }
 
 void AT2PlayGameState::OnRep_EscapeGateOpen()

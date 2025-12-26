@@ -1,6 +1,9 @@
 #include "T2PlayGameMod.h"
+
+#include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
+#include "Gimmick/Portal/PortalActor.h"
 #include "PlayerState/T2PlayerState.h"
 
 AT2PlayGameMod::AT2PlayGameMod()
@@ -62,7 +65,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
         ShuffledPlayers.Swap(i, j);
     }
 
-    // ½ºÆù Æ÷ÀÎÆ® ¹Ì¸® °¡Á®¿À±â
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     TArray<AActor*> KillerSpawnPoints;
     TArray<AActor*> SurvivorSpawnPoints;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("KillerSpawn"), KillerSpawnPoints);
@@ -122,7 +125,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
             OldPawn->Destroy();
         }
 
-        // Á÷Á¢ ½ºÆù
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (SpawnPoint && PawnClass)
         {
             FVector SpawnLocation = SpawnPoint->GetActorLocation();
@@ -155,7 +158,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
         }
         else
         {
-            // ½ºÆù Æ÷ÀÎÆ®³ª Å¬·¡½º ¾øÀ¸¸é ±âÁ¸ ¹æ½Ä
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
             UE_LOG(LogTemp, Warning, TEXT("Player %d: No spawn point or class, using RestartPlayer"), i);
             RestartPlayer(PC);
             APawn* NewPawn = PC->GetPawn();
@@ -260,7 +263,7 @@ void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
 
     UE_LOG(LogTemp, Warning, TEXT("=== OnCharacterDead Called ==="));
 
-    // GameState¿¡¼­ »ýÁ¸ÀÚ ¼ö °¨¼Ò
+    // GameStateï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
     if (GS)
     {
@@ -268,13 +271,13 @@ void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
         UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive decreased to:  %d"), GS->SurvivorsAlive);
     }
 
-    // ½ÂÆÐ Á¶°Ç Ã¼Å©
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¼Å©
     CheckWinConditions();
 }
 
 void AT2PlayGameMod::OnPlayerDied(APlayerController* Player)
 {
-    // OnCharacterDead·Î ÅëÇÕ
+    // OnCharacterDeadï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     OnCharacterDead(Player);
 }
 
@@ -312,7 +315,7 @@ void AT2PlayGameMod::CheckWinConditions()
     UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
         GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
 
-    // ¸ðµç »ýÁ¸ÀÚ°¡ Á×°Å³ª Å»ÃâÇßÀ» ¶§¸¸ °ÔÀÓ Á¾·á
+    // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ú°ï¿½ ï¿½×°Å³ï¿½ Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (GS->SurvivorsAlive <= 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("No survivors alive! "));
@@ -360,7 +363,90 @@ void AT2PlayGameMod::EndMatch(EMatchResult Result)
             UWorld* World = GetWorld();
             if (World)
             {
-                World->ServerTravel(TEXT("/Game/Library_Pack/Maps/Example? listen"));
+                World->ServerTravel(TEXT("/Game/Library_Pack/Maps/Example?listen"));
             }
         }, 3.0f, false);
+}
+
+void AT2PlayGameMod::OnKeyCollected(int32 CurrentTotalKeys)
+{
+    if (!HasAuthority()) return;
+
+    if (bPortalSpawned)
+    {
+        return;
+    }
+    
+    if (CurrentTotalKeys >= KeysRequiredForPortal)
+    {
+        bPortalSpawned = true;
+        SpawnPortalAtRandomLocation();
+    }
+}
+
+void AT2PlayGameMod::SpawnPortalAtRandomLocation()
+{
+     if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (!PortalClass)
+    {
+        return;
+    }
+
+    FVector SpawnLocation = FVector::ZeroVector;
+    bool bFoundLocation = false;
+
+    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    if (NavSys)
+    {
+        FNavLocation RandomLocation;
+        if (NavSys->GetRandomReachablePointInRadius(FVector::ZeroVector, 5000.f, RandomLocation))
+        {
+            SpawnLocation = RandomLocation.Location + FVector(0, 0, 100);
+            bFoundLocation = true;
+        }
+    }
+
+    if (!bFoundLocation)
+    {
+        TArray<AActor*> PlayerStarts;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+        
+        if (PlayerStarts.Num() > 0)
+        {
+            int32 RandomIndex = FMath::RandRange(0, PlayerStarts.Num() - 1);
+            SpawnLocation = PlayerStarts[RandomIndex]->GetActorLocation() + FVector(500, 500, 100);
+            bFoundLocation = true;
+        }
+        else
+        {
+            SpawnLocation = FVector(0, 0, 100);
+            bFoundLocation = true;
+        }
+    }
+
+    if (bFoundLocation)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+        
+        APortalActor* Portal = GetWorld()->SpawnActor<APortalActor>(
+            PortalClass, 
+            SpawnLocation, 
+            FRotator::ZeroRotator, 
+            SpawnParams
+        );
+        
+        if (Portal)
+        {
+            Portal->PortalTimeLimit = PortalDuration;
+            Portal->ActivatePortal();
+            
+            UE_LOG(LogTemp, Warning, TEXT("ðŸŒ€ Portal spawned successfully at %s! Duration: %.0f seconds"), 
+                *SpawnLocation.ToString(), PortalDuration);
+        }
+    }
 }

@@ -53,4 +53,25 @@ private:
 
     void AssignRolesIfReady();
     EPlayerRole GetPlayerRole(AController* Player) const;
+
+#pragma region potal system
+public:
+    void OnKeyCollected(int32 CurrentTotalKeys);
+
+protected:
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    TSubclassOf<class APortalActor> PortalClass;
+
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    int32 KeysRequiredForPortal = 6;
+
+    UPROPERTY(EditAnywhere, Category = "Gimmick")
+    float PortalDuration = 120.0f; // 2분
+
+private:
+    bool bPortalSpawned = false;
+    
+    void SpawnPortalAtRandomLocation();
+    
+#pragma endregion 
 };

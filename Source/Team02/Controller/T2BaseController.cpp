@@ -59,7 +59,7 @@ void AT2BaseController::ShowTitleUI()
         FInputModeUIOnly InputMode;
         SetInputMode(InputMode);
 
-        // Å¸ÀÌÆ² Ä«¸Þ¶ó ¼³Á¤
+        // Å¸ï¿½ï¿½Æ² Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ï¿½
         TArray<AActor*> FoundCameras;
         UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("TitleCamera"), FoundCameras);
 
@@ -101,7 +101,7 @@ void AT2BaseController::TransitionToLobby()
 
     HideTitleUI();
 
-    // ·Îºñ Ä«¸Þ¶ó·Î ÀüÈ¯
+    // ï¿½Îºï¿½ Ä«ï¿½Þ¶ï¿½ï¿½ ï¿½ï¿½È¯
     TArray<AActor*> FoundCameras;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SelectCamera"), FoundCameras);
 
@@ -113,7 +113,7 @@ void AT2BaseController::TransitionToLobby()
         UE_LOG(LogTemp, Warning, TEXT("TransitionToLobby: Set view to %s"), *FoundCameras[0]->GetName());
     }
 
-    // ·Îºñ UI Ç¥½Ã
+    // ï¿½Îºï¿½ UI Ç¥ï¿½ï¿½
     ShowLobbyUI();
 
     UE_LOG(LogTemp, Warning, TEXT("Transitioned to Lobby! "));
@@ -157,7 +157,7 @@ void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // Å¬¶óÀÌ¾ðÆ®: PlayerState°¡ º¹Á¦µÇ¸é µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+    // Å¬ï¿½ï¿½ï¿½Ì¾ï¿½Æ®: PlayerStateï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½Îµï¿½
     BindRoleChangedDelegate();
 
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
@@ -177,7 +177,7 @@ void AT2BaseController::OnPossess(APawn* InPawn)
 
     if (IsLocalPlayerController())
     {
-        // »õ PawnÀ» PossessÇÏ¸é ¹ÙÀÎµù ´Ù½Ã È®ÀÎ
+        // ï¿½ï¿½ Pawnï¿½ï¿½ Possessï¿½Ï¸ï¿½ ï¿½ï¿½ï¿½Îµï¿½ ï¿½Ù½ï¿½ È®ï¿½ï¿½
         BindRoleChangedDelegate();
 
         if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
@@ -187,10 +187,10 @@ void AT2BaseController::OnPossess(APawn* InPawn)
 
             if (PS->PlayerRole != EPlayerRole::None)
             {
-                // »õ Pawn Possess ½Ã Ç×»ó HUD Àç»ý¼º
+                // ï¿½ï¿½ Pawn Possess ï¿½ï¿½ ï¿½×»ï¿½ HUD ï¿½ï¿½ï¿½ï¿½ï¿½
                 HideAllHUD();
 
-                // ±âÁ¸ HUD ÀÎ½ºÅÏ½º ¿ÏÀüÈ÷ Á¦°Å
+                // ï¿½ï¿½ï¿½ï¿½ HUD ï¿½Î½ï¿½ï¿½Ï½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
                 if (SurvivorHUDInstance)
                 {
                     SurvivorHUDInstance->RemoveFromParent();
@@ -218,13 +218,13 @@ void AT2BaseController::BindRoleChangedDelegate()
     AT2PlayerState* PS = GetPlayerState<AT2PlayerState>();
     if (!PS) return;
 
-    // ÀÌ¹Ì °°Àº PlayerState¿¡ ¹ÙÀÎµùµÇ¾î ÀÖÀ¸¸é ½ºÅµ
+    // ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ PlayerStateï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½Ç¾ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Åµ
     if (bDelegateBound && BoundPlayerState == PS)
     {
         return;
     }
 
-    // ´Ù¸¥ PlayerState¿¡ ¹ÙÀÎµùµÇ¾î ÀÖÀ¸¸é ÇØÁ¦
+    // ï¿½Ù¸ï¿½ PlayerStateï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½Ç¾ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (bDelegateBound && BoundPlayerState && BoundPlayerState != PS)
     {
         BoundPlayerState->OnPlayerRoleChanged.RemoveDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
@@ -260,7 +260,7 @@ void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
         return;
     }
 
-    // ÀÚ±â PlayerStateÀÇ Role°ú ÀÏÄ¡ÇÏ´ÂÁö È®ÀÎ
+    // ï¿½Ú±ï¿½ PlayerStateï¿½ï¿½ Roleï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ï´ï¿½ï¿½ï¿½ È®ï¿½ï¿½
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
         if (PS->PlayerRole != NewRole)
@@ -354,7 +354,7 @@ void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 {
     if (!IsLocalPlayerController()) return;
 
-    // ÀÚ±â PlayerStateÀÇ Role°ú ÀÏÄ¡ÇÏ´ÂÁö È®ÀÎ
+    // ï¿½Ú±ï¿½ PlayerStateï¿½ï¿½ Roleï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ï´ï¿½ï¿½ï¿½ È®ï¿½ï¿½
     AT2PlayerState* MyPS = GetPlayerState<AT2PlayerState>();
     if (!MyPS)
     {
@@ -424,7 +424,7 @@ void AT2BaseController::OpenSettingsMenu()
         SettingsMenuInstance->AddToViewport(100);
         bIsSettingsMenuOpen = true;
 
-        // ¸¶¿ì½º Ä¿¼­ Ç¥½Ã + UI ÀÔ·Â ¸ðµå (°ÔÀÓÀº ¸ØÃßÁö ¾ÊÀ½)
+        // ï¿½ï¿½ï¿½ì½º Ä¿ï¿½ï¿½ Ç¥ï¿½ï¿½ + UI ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         FInputModeGameAndUI InputMode;
         InputMode.SetWidgetToFocus(SettingsMenuInstance->TakeWidget());
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -436,7 +436,7 @@ void AT2BaseController::OpenSettingsMenu()
 }
 void AT2BaseController::ServerRequestStartGame_Implementation()
 {
-    // ¼­¹ö¿¡¼­¸¸ ½ÇÇà
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>())
     {
         GM->TryStartGame();
@@ -463,7 +463,7 @@ void AT2BaseController::CloseSettingsMenu()
 
     bIsSettingsMenuOpen = false;
 
-    // °ÔÀÓ ÀÔ·Â ¸ðµå·Î º¹±Í
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     FInputModeGameOnly InputMode;
     SetInputMode(InputMode);
     bShowMouseCursor = false;

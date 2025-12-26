@@ -23,6 +23,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
 	float PortalTimeLimit = 120.0f;
 
+	UFUNCTION(BlueprintPure, Category = "Portal", meta = (WorldContext = "WorldContextObject"))
+	static APortalActor* FindActivePortal(const UObject* WorldContextObject);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UStaticMeshComponent* PortalMesh;
@@ -31,16 +34,27 @@ protected:
 	class USphereComponent* TriggerVolume;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UParticleSystemComponent* PortalEffect;
+	class UNiagaraComponent* PortalEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UPointLightComponent* PortalLight;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal VFX")
+	class UNiagaraSystem* PortalNiagaraSystem;
 
 	UPROPERTY(Replicated)
 	TArray<APlayerState*> EnteredPlayers;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_IsActive)
 	bool bIsActive = false;
 
 	UPROPERTY(Replicated)
 	float RemainingTime;
+	
+	UFUNCTION()
+	void OnRep_IsActive();
+	
+	void SpawnPortalEffects();
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Portal")
@@ -54,6 +68,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Portal")
 	const TArray<APlayerState*>& GetEnteredPlayers() const { return EnteredPlayers; }
+
+	UFUNCTION(BlueprintPure, Category = "Portal")
+	FVector GetPortalLocation() const { return GetActorLocation(); }
 
 protected:
 	FTimerHandle PortalTimerHandle;
@@ -77,4 +94,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Game")
 	FName NextMapName = "NextLevel";
+
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bShowDebugSphere = true;
 };
