@@ -2,6 +2,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
 #include "PlayerState/T2PlayerState.h"
+#include "Gimmick/ItemSpawner.h"
+#include "EngineUtils.h"
 
 AT2PlayGameMod::AT2PlayGameMod()
 {
@@ -10,6 +12,19 @@ AT2PlayGameMod::AT2PlayGameMod()
 void AT2PlayGameMod::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (!HasAuthority()) return;
+
+    for (TActorIterator<AItemSpawner> It(GetWorld()); It; ++It)
+    {
+        AItemSpawner* Spawner = *It;
+
+        if (IsValid(Spawner))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Found ItemSpawner, calling SpawnItems"));
+            Spawner->SpawnItems();
+        }
+    }
 }
 
 void AT2PlayGameMod::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)

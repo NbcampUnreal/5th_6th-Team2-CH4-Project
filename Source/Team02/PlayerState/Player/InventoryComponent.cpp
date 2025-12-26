@@ -101,7 +101,7 @@ void UInventoryComponent::UseSlot(int32 SlotIndex)
 		UFlashlightComponent* FL = T2PC->FindComponentByClass<UFlashlightComponent>();
 		if (IsValid(FL) == true)
 		{
-			FL->AddBattery(10.f);
+			FL->AddBattery(30.f);
 		}
 		
 		Items[SlotIndex].ItemID = NAME_None;

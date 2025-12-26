@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,16 +11,32 @@ class TEAM02_API AItemSpawner : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AItemSpawner();
 
+    void SpawnItems();
+
+    UPROPERTY(EditAnywhere)
+    TArray<AActor*> SpawnPoints;
+
+    UPROPERTY(EditAnywhere)
+    TSubclassOf<AActor> KeyClass;
+
+    UPROPERTY(EditAnywhere)
+    TSubclassOf<AActor> BatteryClass;
+
+    UPROPERTY(EditAnywhere)
+    TSubclassOf<AActor> PotionClass;
+
+    UPROPERTY(EditAnywhere)
+    int32 NumKeys = 6;
+
+    UPROPERTY(EditAnywhere)
+    int32 NumBatteries = 5;
+
+    UPROPERTY(EditAnywhere)
+    int32 NumPotions = 5;
+
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-
-public:
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<AItemBase> ItemClass;
 
 };

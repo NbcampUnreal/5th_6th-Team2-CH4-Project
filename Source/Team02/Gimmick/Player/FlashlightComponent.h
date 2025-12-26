@@ -40,7 +40,7 @@ public:
 	float CurrentBattery = 100.f;
 
 	UPROPERTY(EditDefaultsOnly)
-	float DrainPerSecond = 10.f;
+	float DrainPerSecond = 1.f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_FlashlightOn)
 	bool bIsOn = false;
