@@ -1,30 +1,59 @@
-
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Gimmick/ItemSpawner.h"
+#include "EngineUtils.h"
+#include "Engine/TargetPoint.h"
 
-// Sets default values
 AItemSpawner::AItemSpawner()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 }
 
-// Called when the game starts or when spawned
 void AItemSpawner::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	if (!HasAuthority()) return; 
-
-	GetWorld()->SpawnActor<AItemBase>(
-		ItemClass,
-		GetActorTransform()
-	);
-	
 }
+
+void AItemSpawner::SpawnItems()
+{
+    SpawnPoints.Empty();
+
+    for (TActorIterator<ATargetPoint> It(GetWorld()); It; ++It)
+    {
+        SpawnPoints.Add(*It);
+    }
+
+    if (SpawnPoints.Num() == 0)
+    {
+        UE_LOG(LogTemp, Error, TEXT("No TargetPoints"));
+        return;
+    }
+
+    TArray<AActor*> ShuffledPoints = SpawnPoints;
+    ShuffledPoints.Sort([](const AActor& A, const AActor& B) {
+        return FMath::RandBool();
+        });
+
+    int32 UsedIndex = 0;
+
+    auto SpawnN = [&](TSubclassOf<AActor> ItemClass, int32 Count)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (UsedIndex >= ShuffledPoints.Num()) return;
+
+                AActor* Point = ShuffledPoints[UsedIndex++];
+                FTransform T = Point->GetActorTransform();
+
+                GetWorld()->SpawnActor<AActor>(ItemClass, T);
+            }
+        };
+
+    SpawnN(KeyClass, NumKeys);
+    SpawnN(PotionClass, NumPotions);
+    SpawnN(BatteryClass, NumBatteries);
+}
+
 
 
 
