@@ -13,7 +13,13 @@ AT2GameModeBase::AT2GameModeBase()
 void AT2GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
+    FString MapName = GetWorld()->GetMapName();
+    MapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
 
+    bIsTitleMap = MapName.Contains(TEXT("title"));
+
+    UE_LOG(LogTemp, Warning, TEXT("T2GameModeBase::BeginPlay - Map: %s, IsTitleMap: %s"),
+        *MapName, bIsTitleMap ? TEXT("YES") : TEXT("NO"));
       APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
     if (PC)
@@ -60,6 +66,8 @@ bool AT2GameModeBase::CanStartGame()
 
 void AT2GameModeBase::TryStartGame()
 {
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Called!"));
+
     if (!HasAuthority())
     {
         UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not server!"));
@@ -68,16 +76,13 @@ void AT2GameModeBase::TryStartGame()
 
     if (!CanStartGame())
     {
-        UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Not enough players (%d/%d)"),
+        UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Not enough players (%d/%d)"),
             GetNumPlayers(), RequiredPlayers);
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Starting with %d players! "), GetNumPlayers());
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players! "), GetNumPlayers());
 
-    bInLobby = false;  // 추가
-
-    // 모든 클라이언트에게 게임 시작 알림
     for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
         if (AT2BaseController* PC = Cast<AT2BaseController>(It->Get()))
@@ -86,7 +91,8 @@ void AT2GameModeBase::TryStartGame()
         }
     }
 
-    GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Library_Pack/Maps/%s? listen"), *GamePlayMapName.ToString()));
+ 
+    GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Team02/Blueprint/map/%s? listen"), *GamePlayMapName.ToString()));
 }
 
 void AT2GameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -226,4 +232,14 @@ void AT2GameModeBase::SpawnPortalAtRandomLocation()
     {
         UE_LOG(LogTemp, Error, TEXT("Could not find valid spawn location for portal!"));
     }
+}
+UClass* AT2GameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+    if (bIsTitleMap)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetDefaultPawnClass: Title map - No pawn spawn"));
+        return nullptr;
+    }
+
+    return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
