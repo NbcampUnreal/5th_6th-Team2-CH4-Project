@@ -48,7 +48,10 @@ void UFlashlightComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 void UFlashlightComponent::Server_ToggleFlashlight_Implementation()
 {
-	bIsOn = !bIsOn;
+	if (CurrentBattery > 0.f)
+	{
+		bIsOn = !bIsOn;
+	}
 
 	if (bIsOn)
 	{
@@ -103,7 +106,9 @@ void UFlashlightComponent::ApplyFlashlightState()
 
 	if (!CachedSpotLight) return;
 
+
 	CachedSpotLight->SetVisibility(bIsOn);
+	
 
 	APawn* PawnOnwer = Cast<APawn>(GetOwner());
 
