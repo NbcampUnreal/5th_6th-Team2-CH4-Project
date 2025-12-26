@@ -53,14 +53,17 @@ void UFlashlightComponent::Server_ToggleFlashlight_Implementation()
 		bIsOn = !bIsOn;
 	}
 
-	if (bIsOn)
+#pragma region Turn ON/OFF DEBUG LOGGING
+	/*if (bIsOn)
 	{
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Flashlight ON!")), true, true, FLinearColor::Red, 5.f);
 	}
 	else
 	{
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Flashlight OFF!")), true, true, FLinearColor::Red, 5.f);
-	}
+	}*/
+#pragma endregion
+
 	ApplyFlashlightState();   //  서버 / Standalone 화면용
 }
 
