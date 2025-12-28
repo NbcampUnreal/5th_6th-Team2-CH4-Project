@@ -1,10 +1,13 @@
 #include "UW_SurvivorHUD.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
+#include "Components/CanvasPanel.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "PlayerState/Player/InventoryComponent.h"
 #include "Components/Image.h"
 #include "Public/ItemData.h"
 #include "Gimmick/Player/FlashlightComponent.h"
+#include "T2PlayGameState.h"
 
 void UUW_SurvivorHUD::NativeConstruct()
 {
@@ -22,6 +25,22 @@ void UUW_SurvivorHUD::NativeConstruct()
     if (Battery)
     {
         Battery->SetPercent(1.0f);
+    }
+
+    // 키 카운트 초기화
+    if (KeyCountText)
+    {
+        KeyCountText->SetText(FText::FromString(TEXT("0 / 6")));
+    }
+
+    // 포탈 타이머 초기 숨김
+    if (PortalTimerText)
+    {
+        PortalTimerText->SetVisibility(ESlateVisibility::Hidden);
+    }
+    if (PortalTimerPanel)
+    {
+        PortalTimerPanel->SetVisibility(ESlateVisibility::Hidden);
     }
 
     TryBindToPlayerState();
@@ -42,6 +61,10 @@ void UUW_SurvivorHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     {
         TryBindToPlayerState();
     }
+
+    // 매 틱마다 키 카운트와 포탈 타이머 업데이트
+    UpdateKeyCount();
+    UpdatePortalTimer();
 }
 
 void UUW_SurvivorHUD::TryBindToPlayerState()
@@ -49,7 +72,7 @@ void UUW_SurvivorHUD::TryBindToPlayerState()
     APlayerController* PC = GetOwningPlayer();
     if (!PC) return;
 
-    // HP ���ε� (PlayerState�� ������ ��)
+    // HP 바인딩 (PlayerState만 있으면 됨)
     if (!bIsHPBound)
     {
         ASurvivorPlayerState* PS = PC->GetPlayerState<ASurvivorPlayerState>();
@@ -62,7 +85,7 @@ void UUW_SurvivorHUD::TryBindToPlayerState()
         }
     }
 
-    // Battery ���ε� (Pawn + FlashlightComponent �ʿ�)
+    // Battery 바인딩 (Pawn + FlashlightComponent 필요)
     if (!bIsBatteryBound)
     {
         APawn* Pawn = PC->GetPawn();
@@ -79,7 +102,6 @@ void UUW_SurvivorHUD::TryBindToPlayerState()
         }
     }
 
-    // �� �� ���ε� �Ǹ� bIsBound = true
     bIsBound = bIsHPBound && bIsBatteryBound;
 }
 
@@ -125,6 +147,64 @@ void UUW_SurvivorHUD::UpdateBattery(float CurrentBattery, float MaxBattery)
     {
         float Percent = CurrentBattery / MaxBattery;
         Battery->SetPercent(Percent);
+    }
+}
+
+void UUW_SurvivorHUD::UpdateKeyCount()
+{
+    if (!KeyCountText) return;
+
+    AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
+    if (!GS) return;
+
+    int32 CurrentKeys = GS->GetKeyCount();
+    int32 RequiredKeys = GS->GetRequiredKeys();
+
+    FString KeyString = FString::Printf(TEXT("%d / %d"), CurrentKeys, RequiredKeys);
+    KeyCountText->SetText(FText::FromString(KeyString));
+}
+
+void UUW_SurvivorHUD::UpdatePortalTimer()
+{
+    AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
+    if (!GS) return;
+
+    bool bPortalActive = GS->IsPortalActive();
+
+    // 포탈이 활성화되지 않았으면 숨김
+    if (!bPortalActive)
+    {
+        if (PortalTimerText)
+        {
+            PortalTimerText->SetVisibility(ESlateVisibility::Hidden);
+        }
+        if (PortalTimerPanel)
+        {
+            PortalTimerPanel->SetVisibility(ESlateVisibility::Hidden);
+        }
+        return;
+    }
+
+    // 포탈 활성화 시 표시
+    if (PortalTimerText)
+    {
+        PortalTimerText->SetVisibility(ESlateVisibility::Visible);
+    }
+    if (PortalTimerPanel)
+    {
+        PortalTimerPanel->SetVisibility(ESlateVisibility::Visible);
+    }
+
+    // 남은 시간 표시
+    float RemainingTime = GS->GetPortalRemainingTime();
+    int32 Minutes = FMath::FloorToInt(RemainingTime / 60.0f);
+    int32 Seconds = FMath::FloorToInt(RemainingTime) % 60;
+
+    FString TimeString = FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds);
+    
+    if (PortalTimerText)
+    {
+        PortalTimerText->SetText(FText::FromString(TimeString));
     }
 }
 

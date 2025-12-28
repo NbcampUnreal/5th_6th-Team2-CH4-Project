@@ -4,12 +4,16 @@
 #include "Blueprint/UserWidget.h"
 #include "UW_SurvivorHUD.h"
 #include "UI/UW_RoundProgressBar.h"
+#include "Public/UW_PersonalResult.h"
+#include "Public/AT2SpectatorPawn.h"
 #include "Components/Image.h"
 #include "Kismet/GameplayStatics.h"
 #include "Character/T2BaseCharacter.h"
+#include "Character/PlayerCharacter/T2PlayerCharacter.h"
 #include "Gimmick/Player/ItemBase.h"
 #include "EngineUtils.h"
-#include "GameMode/T2GameModeBase.h" 
+#include "GameMode/T2GameModeBase.h"
+#include "T2PlayGameState.h"
 
 AT2BaseController::AT2BaseController()
 {
@@ -24,7 +28,6 @@ void AT2BaseController::BeginPlay()
         FString MapName = GetWorld()->GetMapName();
         MapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
 
-
         if (MapName.Contains(TEXT("title")))
         {
             ShowTitleUI();
@@ -38,11 +41,11 @@ void AT2BaseController::ShowTitleUI()
 {
     if (!IsLocalPlayerController()) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  Started"));
+    UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI: Started"));
 
     if (!TitleWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("TitleWidgetClass is not set! "));
+        UE_LOG(LogTemp, Warning, TEXT("TitleWidgetClass is not set!"));
         return;
     }
 
@@ -59,27 +62,12 @@ void AT2BaseController::ShowTitleUI()
         FInputModeUIOnly InputMode;
         SetInputMode(InputMode);
 
-        // Ÿ��Ʋ ī�޶� ����
         TArray<AActor*> FoundCameras;
         UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("TitleCamera"), FoundCameras);
 
-        UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI: Found %d TitleCamera(s)"), FoundCameras.Num());
-
         if (FoundCameras.Num() > 0)
         {
-            AActor* CameraActor = FoundCameras[0];
-            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  Camera Actor = %s"), *CameraActor->GetName());
-
-            // Pawn üũ
-            APawn* MyPawn = GetPawn();
-            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  MyPawn = %s"), MyPawn ? *MyPawn->GetName() : TEXT("NULL"));
-
-            SetViewTargetWithBlend(CameraActor, 0.0f);
-            UE_LOG(LogTemp, Warning, TEXT("ShowTitleUI:  SetViewTargetWithBlend called"));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("ShowTitleUI:  No TitleCamera found!"));
+            SetViewTargetWithBlend(FoundCameras[0], 0.0f);
         }
 
         UE_LOG(LogTemp, Warning, TEXT("TitleUI displayed!"));
@@ -101,30 +89,24 @@ void AT2BaseController::TransitionToLobby()
 
     HideTitleUI();
 
-    // �κ� ī�޶�� ��ȯ
     TArray<AActor*> FoundCameras;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SelectCamera"), FoundCameras);
-
-    UE_LOG(LogTemp, Warning, TEXT("TransitionToLobby: Found %d SelectCamera(s)"), FoundCameras.Num());
 
     if (FoundCameras.Num() > 0)
     {
         SetViewTargetWithBlend(FoundCameras[0], 1.0f);
-        UE_LOG(LogTemp, Warning, TEXT("TransitionToLobby: Set view to %s"), *FoundCameras[0]->GetName());
     }
 
-    // �κ� UI ǥ��
     ShowLobbyUI();
-
-    UE_LOG(LogTemp, Warning, TEXT("Transitioned to Lobby! "));
 }
+
 void AT2BaseController::ShowLobbyUI()
 {
     if (!IsLocalPlayerController()) return;
 
     if (!LobbyWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("LobbyWidgetClass is not set! "));
+        UE_LOG(LogTemp, Warning, TEXT("LobbyWidgetClass is not set!"));
         return;
     }
 
@@ -140,8 +122,6 @@ void AT2BaseController::ShowLobbyUI()
         bShowMouseCursor = true;
         FInputModeUIOnly InputMode;
         SetInputMode(InputMode);
-
-        UE_LOG(LogTemp, Warning, TEXT("LobbyUI displayed!"));
     }
 }
 
@@ -153,17 +133,15 @@ void AT2BaseController::HideLobbyUI()
     }
     LobbyWidgetInstance = nullptr;
 }
+
 void AT2BaseController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // Ŭ���̾�Ʈ: PlayerState�� �����Ǹ� ��������Ʈ ���ε�
     BindRoleChangedDelegate();
 
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
-        UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState: Role = %d"), (int32)PS->PlayerRole);
-
         if (PS->PlayerRole != EPlayerRole::None)
         {
             UpdateHUDForRole(PS->PlayerRole);
@@ -177,20 +155,14 @@ void AT2BaseController::OnPossess(APawn* InPawn)
 
     if (IsLocalPlayerController())
     {
-        // �� Pawn�� Possess�ϸ� ���ε� �ٽ� Ȯ��
         BindRoleChangedDelegate();
 
         if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
         {
-            UE_LOG(LogTemp, Warning, TEXT("OnPossess: Role = %d, CurrentDisplayedRole = %d"),
-                (int32)PS->PlayerRole, (int32)CurrentDisplayedRole);
-
             if (PS->PlayerRole != EPlayerRole::None)
             {
-                // �� Pawn Possess �� �׻� HUD �����
                 HideAllHUD();
 
-                // ���� HUD �ν��Ͻ� ������ ����
                 if (SurvivorHUDInstance)
                 {
                     SurvivorHUDInstance->RemoveFromParent();
@@ -218,69 +190,44 @@ void AT2BaseController::BindRoleChangedDelegate()
     AT2PlayerState* PS = GetPlayerState<AT2PlayerState>();
     if (!PS) return;
 
-    // �̹� ���� PlayerState�� ���ε��Ǿ� ������ ��ŵ
     if (bDelegateBound && BoundPlayerState == PS)
     {
         return;
     }
 
-    // �ٸ� PlayerState�� ���ε��Ǿ� ������ ����
     if (bDelegateBound && BoundPlayerState && BoundPlayerState != PS)
     {
         BoundPlayerState->OnPlayerRoleChanged.RemoveDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
-        UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate: Unbound from %s"), *BoundPlayerState->GetName());
         bDelegateBound = false;
     }
 
     PS->OnPlayerRoleChanged.AddDynamic(this, &AT2BaseController::OnPlayerRoleChanged);
     BoundPlayerState = PS;
     bDelegateBound = true;
-    UE_LOG(LogTemp, Warning, TEXT("BindRoleChangedDelegate: Delegate bound to %s"), *PS->GetName());
 }
 
 void AT2BaseController::SetupInputComponent()
 {
     Super::SetupInputComponent();
 
-
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AT2BaseController::ToggleSettingsMenu);
 }
 
 void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
 {
-    if (!IsLocalPlayerController())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole:  Not local controller, skipping"));
-        return;
-    }
+    if (!IsLocalPlayerController()) return;
 
-    if (NewRole == EPlayerRole::None)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role is None, skipping"));
-        return;
-    }
+    if (NewRole == EPlayerRole::None) return;
 
-    // �ڱ� PlayerState�� Role�� ��ġ�ϴ��� Ȯ��
     if (AT2PlayerState* PS = GetPlayerState<AT2PlayerState>())
     {
-        if (PS->PlayerRole != NewRole)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: Role mismatch (PS=%d, NewRole=%d), skipping"),
-                (int32)PS->PlayerRole, (int32)NewRole);
-            return;
-        }
+        if (PS->PlayerRole != NewRole) return;
     }
 
-    if (bHUDInitialized && CurrentDisplayedRole == NewRole)
-    {
-        return;
-    }
+    if (bHUDInitialized && CurrentDisplayedRole == NewRole) return;
 
     CurrentDisplayedRole = NewRole;
     bHUDInitialized = true;
-
-    UE_LOG(LogTemp, Warning, TEXT("UpdateHUDForRole: %s"),
-        NewRole == EPlayerRole::Killer ? TEXT("Killer") : TEXT("Survivor"));
 
     HideAllHUD();
 
@@ -293,13 +240,10 @@ void AT2BaseController::UpdateHUDForRole(EPlayerRole NewRole)
         ShowSurvivorHUD();
     }
 }
+
 void AT2BaseController::ShowKillerHUD()
 {
-    if (!KillerHUDWidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUDWidgetClass is not set!"));
-        return;
-    }
+    if (!KillerHUDWidgetClass) return;
 
     if (!KillerHUDInstance)
     {
@@ -309,17 +253,12 @@ void AT2BaseController::ShowKillerHUD()
     if (KillerHUDInstance)
     {
         KillerHUDInstance->AddToViewport();
-        UE_LOG(LogTemp, Warning, TEXT("KillerHUD displayed!"));
     }
 }
 
 void AT2BaseController::ShowSurvivorHUD()
 {
-    if (!SurvivorHUDWidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SurvivorHUDWidgetClass is not set!"));
-        return;
-    }
+    if (!SurvivorHUDWidgetClass) return;
 
     if (!SurvivorHUDInstance)
     {
@@ -333,7 +272,6 @@ void AT2BaseController::ShowSurvivorHUD()
     {
         SurvivorHUDInstance->AddToViewport();
         SurvivorHUDInstance->Init(PS);
-        UE_LOG(LogTemp, Warning, TEXT("SurvivorHUD displayed! "));
     }
 }
 
@@ -354,45 +292,21 @@ void AT2BaseController::OnPlayerRoleChanged(EPlayerRole NewRole)
 {
     if (!IsLocalPlayerController()) return;
 
-    // �ڱ� PlayerState�� Role�� ��ġ�ϴ��� Ȯ��
     AT2PlayerState* MyPS = GetPlayerState<AT2PlayerState>();
-    if (!MyPS)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: MyPS is null, skipping"));
-        return;
-    }
+    if (!MyPS) return;
 
     APawn* MyPawn = GetPawn();
-    if (!MyPawn)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: No Pawn yet, skipping"));
-        return;
-    }
+    if (!MyPawn) return;
 
+    if (MyPawn->GetClass()->GetName().Contains(TEXT("DefaultPawn"))) return;
 
-    if (MyPawn->GetClass()->GetName().Contains(TEXT("DefaultPawn")))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Still DefaultPawn, skipping"));
-        return;
-    }
+    if (MyPS->PlayerRole != NewRole) return;
 
-    if (MyPS->PlayerRole != NewRole)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Role mismatch, skipping (MyRole=%d, NewRole=%d)"),
-            (int32)MyPS->PlayerRole, (int32)NewRole);
-        return;
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT("OnPlayerRoleChanged: Role = %d, Pawn = %s"),
-        (int32)NewRole, *MyPawn->GetName());
     UpdateHUDForRole(NewRole);
 }
 
-
 void AT2BaseController::ToggleSettingsMenu()
 {
-    UE_LOG(LogTemp, Warning, TEXT("ESC Pressed - ToggleSettingsMenu"));
-
     if (!IsLocalPlayerController()) return;
 
     if (bIsSettingsMenuOpen)
@@ -405,14 +319,9 @@ void AT2BaseController::ToggleSettingsMenu()
     }
 }
 
-
 void AT2BaseController::OpenSettingsMenu()
 {
-    if (!SettingsMenuWidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SettingsMenuWidgetClass is not set!"));
-        return;
-    }
+    if (!SettingsMenuWidgetClass) return;
 
     if (!SettingsMenuInstance)
     {
@@ -424,24 +333,22 @@ void AT2BaseController::OpenSettingsMenu()
         SettingsMenuInstance->AddToViewport(100);
         bIsSettingsMenuOpen = true;
 
-        // ���콺 Ŀ�� ǥ�� + UI �Է� ��� (������ ������ ����)
         FInputModeGameAndUI InputMode;
         InputMode.SetWidgetToFocus(SettingsMenuInstance->TakeWidget());
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         SetInputMode(InputMode);
         bShowMouseCursor = true;
-
-        UE_LOG(LogTemp, Warning, TEXT("Settings Menu Opened!"));
     }
 }
+
 void AT2BaseController::ServerRequestStartGame_Implementation()
 {
-    // ���������� ����
     if (AT2GameModeBase* GM = GetWorld()->GetAuthGameMode<AT2GameModeBase>())
     {
         GM->TryStartGame();
     }
 }
+
 void AT2BaseController::Client_OnGameStarted_Implementation()
 {
     HideLobbyUI();
@@ -450,8 +357,6 @@ void AT2BaseController::Client_OnGameStarted_Implementation()
     bShowMouseCursor = false;
     FInputModeGameOnly InputMode;
     SetInputMode(InputMode);
-
-    UE_LOG(LogTemp, Warning, TEXT("Client:  Game Started!"));
 }
 
 void AT2BaseController::CloseSettingsMenu()
@@ -463,22 +368,13 @@ void AT2BaseController::CloseSettingsMenu()
 
     bIsSettingsMenuOpen = false;
 
-    // ���� �Է� ���� ����
     FInputModeGameOnly InputMode;
     SetInputMode(InputMode);
     bShowMouseCursor = false;
-
-    UE_LOG(LogTemp, Warning, TEXT("Settings Menu Closed!"));
 }
 
 void AT2BaseController::RequestLeaveGame()
 {
-    UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame called!"));
-
-    if (HasAuthority() && GetNetMode() == NM_ListenServer)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Server is leaving - all players will disconnect"));
-    }
     if (UWorld* World = GetWorld())
     {
         UGameplayStatics::OpenLevel(World, TEXT("/Game/Team02/Blueprint/map/title"));
@@ -499,7 +395,7 @@ void AT2BaseController::StartInteractUI()
 
     UImage* ProgressImage = Cast<UImage>(InteractWidgetClassInstance->GetWidgetFromName(TEXT("RoundProgressImage")));
 
-    if (IsValid(ProgressImage) == true)
+    if (IsValid(ProgressImage))
     {
         InteractMID = ProgressImage->GetDynamicMaterial();
         InteractMID->SetScalarParameterValue(TEXT("Percent"), 0.f);
@@ -526,4 +422,215 @@ void AT2BaseController::StopInteractUI()
 
     InteractMID = nullptr;
     bInteractUIActive = false;
+}
+
+void AT2BaseController::Client_ShowPersonalResult_Implementation(bool bEscaped)
+{
+    if (!IsLocalPlayerController()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("Client_ShowPersonalResult: bEscaped = %s"), bEscaped ? TEXT("TRUE") : TEXT("FALSE"));
+
+    bWasEscaped = bEscaped;
+
+    HideAllHUD();
+
+    if (!PersonalResultWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PersonalResultWidgetClass is not set!"));
+        return;
+    }
+
+    PersonalResultInstance = CreateWidget<UUW_PersonalResult>(this, PersonalResultWidgetClass);
+
+    if (PersonalResultInstance)
+    {
+        PersonalResultInstance->SetResult(bEscaped);
+        PersonalResultInstance->AddToViewport(50);
+
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        SetInputMode(InputMode);
+        bShowMouseCursor = true;
+
+        UE_LOG(LogTemp, Warning, TEXT("PersonalResultWidget displayed!"));
+    }
+}
+
+void AT2BaseController::Client_ShowMatchResult_Implementation(bool bSurvivorWin)
+{
+    if (!IsLocalPlayerController()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("Client_ShowMatchResult: bSurvivorWin = %s"), bSurvivorWin ? TEXT("TRUE") : TEXT("FALSE"));
+
+    // If spectating, stop spectating
+    if (SpawnedSpectatorPawn)
+    {
+        SpawnedSpectatorPawn = nullptr;
+    }
+    bIsSpectating = false;
+
+    // If result widget already exists, add match result
+    if (PersonalResultInstance && PersonalResultInstance->IsInViewport())
+    {
+        PersonalResultInstance->ShowMatchResult(bSurvivorWin);
+    }
+    else
+    {
+        if (!PersonalResultWidgetClass) return;
+
+        PersonalResultInstance = CreateWidget<UUW_PersonalResult>(this, PersonalResultWidgetClass);
+        if (PersonalResultInstance)
+        {
+            PersonalResultInstance->SetResult(bWasEscaped);
+            PersonalResultInstance->ShowMatchResult(bSurvivorWin);
+            PersonalResultInstance->AddToViewport(50);
+
+            FInputModeUIOnly InputMode;
+            SetInputMode(InputMode);
+            bShowMouseCursor = true;
+        }
+    }
+
+    HideAllHUD();
+}
+
+// Called from UI button (client side)
+void AT2BaseController::StartSpectating()
+{
+    if (!IsLocalPlayerController()) return;
+    
+    UE_LOG(LogTemp, Warning, TEXT("=== StartSpectating Called (Client) ==="));
+    
+    // Remove result widget
+    if (PersonalResultInstance && PersonalResultInstance->IsInViewport())
+    {
+        PersonalResultInstance->RemoveFromParent();
+        PersonalResultInstance = nullptr;
+    }
+
+    // Request server to spawn and possess spectator pawn
+    Server_RequestSpectate();
+}
+
+// Server RPC - spawn spectator pawn and possess
+void AT2BaseController::Server_RequestSpectate_Implementation()
+{
+    UE_LOG(LogTemp, Warning, TEXT("=== Server_RequestSpectate Called ==="));
+
+    if (!SpectatorPawnClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Server_RequestSpectate: SpectatorPawnClass is not set!"));
+        return;
+    }
+
+    // Find alive survivor to spectate
+    APawn* Target = GetAliveTarget();
+    if (!Target)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Server_RequestSpectate: No alive target found"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("Server_RequestSpectate: Target = %s at %s"), 
+        *Target->GetName(), *Target->GetActorLocation().ToString());
+
+    // Spawn spectator pawn at target location
+    FVector SpawnLoc = Target->GetActorLocation();
+    FRotator SpawnRot = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AAT2SpectatorPawn* NewSpectatorPawn = GetWorld()->SpawnActor<AAT2SpectatorPawn>(
+        SpectatorPawnClass,
+        SpawnLoc,
+        SpawnRot,
+        SpawnParams
+    );
+
+    if (NewSpectatorPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Server_RequestSpectate: SpectatorPawn spawned"));
+
+        // Set spectate target BEFORE possessing
+        NewSpectatorPawn->SetSpectateTarget(Target);
+
+        // Possess on server (this will replicate to client)
+        Possess(NewSpectatorPawn);
+
+        // Store reference
+        SpawnedSpectatorPawn = NewSpectatorPawn;
+
+        UE_LOG(LogTemp, Warning, TEXT("Server_RequestSpectate: Possessed SpectatorPawn"));
+
+        // Notify client
+        Client_OnSpectateStarted();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Server_RequestSpectate: Failed to spawn SpectatorPawn"));
+    }
+}
+
+// Client RPC - spectating started
+void AT2BaseController::Client_OnSpectateStarted_Implementation()
+{
+    UE_LOG(LogTemp, Warning, TEXT("=== Client_OnSpectateStarted ==="));
+
+    bIsSpectating = true;
+
+    // Set input mode for spectating - game only, no mouse cursor
+    FInputModeGameOnly InputMode;
+    SetInputMode(InputMode);
+    bShowMouseCursor = false;
+}
+
+APawn* AT2BaseController::GetAliveTarget()
+{
+    UE_LOG(LogTemp, Warning, TEXT("=== GetAliveTarget Called ==="));
+    
+    // Find alive survivor (not dead, not escaped, not killer)
+    TArray<AActor*> FoundCharacters;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AT2PlayerCharacter::StaticClass(), FoundCharacters);
+
+    UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: Found %d AT2PlayerCharacter actors"), FoundCharacters.Num());
+
+    for (AActor* Actor : FoundCharacters)
+    {
+        AT2PlayerCharacter* PlayerChar = Cast<AT2PlayerCharacter>(Actor);
+        if (!PlayerChar) continue;
+
+        // Skip hidden actors
+        if (PlayerChar->IsHidden())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: %s is hidden, skipping"), *PlayerChar->GetName());
+            continue;
+        }
+
+        APlayerState* PS = PlayerChar->GetPlayerState();
+        if (!PS) continue;
+
+        // Check if this is a Survivor (not a Killer)
+        ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(PS);
+        if (!SurvivorPS)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: %s is not a Survivor, skipping"), *PlayerChar->GetName());
+            continue;
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: Checking %s - bIsDead=%s, bIsEscaped=%s"),
+            *PlayerChar->GetName(),
+            SurvivorPS->bIsDead ? TEXT("TRUE") : TEXT("FALSE"),
+            SurvivorPS->bIsEscaped ? TEXT("TRUE") : TEXT("FALSE"));
+
+        if (!SurvivorPS->bIsDead && !SurvivorPS->bIsEscaped)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: Found alive survivor %s!"), *PlayerChar->GetName());
+            return PlayerChar;
+        }
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("GetAliveTarget: No alive survivor found!"));
+    return nullptr;
 }
