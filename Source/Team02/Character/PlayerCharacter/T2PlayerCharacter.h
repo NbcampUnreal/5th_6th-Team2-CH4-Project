@@ -80,6 +80,14 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_UseInventorySlot(int32 SlotIndex);
 
+	void HandleFootstep(FName SocketName);
+
+	UFUNCTION(Server, Reliable)
+	void Server_HandleFootstep(FName SocketName);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayFootstep(const FVector& Location);
+
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -136,9 +144,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<AItemBase> HighlightedItem;
 
-
 	UPROPERTY()
 	TSet<TObjectPtr<AItemBase>> NearbyItems;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Footstep")
+	USoundBase* FootstepSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Footstep")
+	USoundAttenuation* FootstepAttenuation;
 
 protected:
 	float CurrentInteractTime = 0.f;

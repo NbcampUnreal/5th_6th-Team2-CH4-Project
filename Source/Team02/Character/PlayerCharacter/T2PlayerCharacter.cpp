@@ -21,6 +21,8 @@
 #include "UI/UW_RoundProgressBar.h"
 #include "Controller/T2BaseController.h"
 #include "Team02.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 
 AT2PlayerCharacter::AT2PlayerCharacter()
@@ -519,3 +521,47 @@ void AT2PlayerCharacter::Server_UseInventorySlot_Implementation(int32 SlotIndex)
 
 	PS->InventoryComponent->UseSlot(SlotIndex);
 }
+
+void AT2PlayerCharacter::HandleFootstep(FName SocketName)
+{
+	if (!IsLocallyControlled()) return;
+
+	if (!HasAuthority())
+	{
+		Server_HandleFootstep(SocketName);
+		return;
+	}
+}
+
+void AT2PlayerCharacter::Server_HandleFootstep_Implementation(FName SocketName)
+{
+	if (!GetMesh()) return;
+
+	const FVector FootLocation = GetMesh()->GetSocketLocation(SocketName);
+
+	Multicast_PlayFootstep(FootLocation);
+}
+
+
+void AT2PlayerCharacter::Multicast_PlayFootstep_Implementation(const FVector& Location)
+{
+	if (!FootstepSound) return;
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("FOOTSTEP MULTICAST | Pawn=%s | Authority=%d | LocalControlled=%d | NetMode=%d"),
+		*GetNameSafe(this),
+		HasAuthority(),
+		IsLocallyControlled(),
+		(int32)GetNetMode());
+
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		FootstepSound,
+		Location,
+		1.0f,
+		1.0f,
+		0.0f,
+		FootstepAttenuation
+	);
+}
+

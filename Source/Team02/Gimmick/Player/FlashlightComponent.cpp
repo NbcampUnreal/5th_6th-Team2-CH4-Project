@@ -4,6 +4,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
+#include "PlayerState/T2PlayerState.h"
 
 UFlashlightComponent::UFlashlightComponent()
 {
@@ -109,17 +110,28 @@ void UFlashlightComponent::ApplyFlashlightState()
 
 	if (!CachedSpotLight) return;
 
+	APawn* PawnOwner = Cast<APawn>(GetOwner());
+	if (!PawnOwner) return;
+
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (AT2PlayerState* LocalPS = PC->GetPlayerState<AT2PlayerState>())
+		{
+			if (LocalPS->PlayerRole == EPlayerRole::Killer)
+			{
+				CachedSpotLight->SetVisibility(false, true);
+				CachedSpotLight->SetIntensity(0.f);
+				return; 
+			}
+		}
+	}
 
 	CachedSpotLight->SetVisibility(bIsOn);
-	
 
-	APawn* PawnOnwer = Cast<APawn>(GetOwner());
-
-	if (!PawnOnwer) return;
 
 	if (bIsOn)
 	{
-		if (PawnOnwer->IsLocallyControlled())
+		if (PawnOwner->IsLocallyControlled())
 		{
 			UGameplayStatics::PlaySound2D(this, ToggleSound);
 
@@ -134,7 +146,7 @@ void UFlashlightComponent::ApplyFlashlightState()
 	}
 	if (!bIsOn)
 	{
-		if (PawnOnwer->IsLocallyControlled())
+		if (PawnOwner->IsLocallyControlled())
 		{
 			UGameplayStatics::PlaySound2D(this, ToggleSound);
 		}
