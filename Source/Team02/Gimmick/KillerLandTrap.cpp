@@ -39,26 +39,6 @@ void AKillerLandTrap::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority() == true)
-	{
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on server.")), true, true, FLinearColor::Green, 5.f);
-	}
-	else
-	{
-		APawn* OwnerPawn = Cast<APawn>(GetOwner());
-		if (IsValid(OwnerPawn) == true)
-		{
-			if (OwnerPawn->IsLocallyControlled() == true)
-			{
-				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on owning client.")), true, true, FLinearColor::Green, 5.f);
-			}
-			else
-			{
-				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on other client.")), true, true, FLinearColor::Green, 5.f);
-			}
-		}
-	}
-
 	if (false == OnActorBeginOverlap.IsAlreadyBound(this, &ThisClass::OnLandTrapBeginOverlap))
 	{
 		OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnLandTrapBeginOverlap);
@@ -68,8 +48,6 @@ void AKillerLandTrap::BeginPlay()
 void AKillerLandTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("ADXLandMine::EndPlay()")), true, true, FLinearColor::Green, 5.f);
 
 	if (true == OnActorBeginOverlap.IsAlreadyBound(this, &ThisClass::OnLandTrapBeginOverlap))
 	{
@@ -93,8 +71,6 @@ void AKillerLandTrap::OnLandTrapBeginOverlap(AActor* OverlappedActor, AActor* Ot
 			if (ASurvivorPlayerState* SurvivorPS = TargetPawn->GetPlayerState<ASurvivorPlayerState>())
 			{
 				SurvivorPS->ApplyTrapDebuff(TrapDamage, SpeedReductionMultiplier, SpeedDebuffDuration, VisionDebuffDuration);
-                
-				UKismetSystemLibrary::PrintString(this, TEXT("Trap Activated on Survivor!"), true, true, FLinearColor::Red, 5.f);
 			}
 		}
 
