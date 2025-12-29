@@ -18,9 +18,10 @@ void AT2PlayGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AT2PlayGameState, SurvivorsAlive);
     DOREPLIFETIME(AT2PlayGameState, SurvivorsEscaped);
     DOREPLIFETIME(AT2PlayGameState, MatchResult);
+    DOREPLIFETIME(AT2PlayGameState, bIsPortalActive);
+    DOREPLIFETIME(AT2PlayGameState, PortalRemainingTime);
 }
 
-// �� ���� �Լ����� ����! ��
 void AT2PlayGameState::AddKeyCount(int32 Amount)
 {
     if (GetLocalRole() != ROLE_Authority) return;
@@ -34,7 +35,6 @@ void AT2PlayGameState::AddKeyCount(int32 Amount)
         GM->OnKeyCollected(TotalKeyCount);
     }
     
-    // ���� �� ������ Ż�⹮ ����
     if (TotalKeyCount >= RequiredKeys)
     {
         SetEscapeGateOpen(true);
@@ -46,7 +46,6 @@ void AT2PlayGameState::OnRep_KeyCount()
     UE_LOG(LogTemp, Warning, TEXT("Keys: %d / %d (Gate)"), TotalKeyCount, RequiredKeys);
 }
 
-// ���� �Լ� (AddKeyCount ȣ��)
 void AT2PlayGameState::AddCollectedKey()
 {
     AddKeyCount(1);
@@ -84,6 +83,31 @@ void AT2PlayGameState::SetMatchResult(EMatchResult Result)
     if (GetLocalRole() != ROLE_Authority) return;
 
     MatchResult = Result;
+}
+
+void AT2PlayGameState::SetPortalActive(bool bActive)
+{
+    if (GetLocalRole() != ROLE_Authority) return;
+
+    bIsPortalActive = bActive;
+    UE_LOG(LogTemp, Warning, TEXT("Portal Active: %s"), bActive ? TEXT("TRUE") : TEXT("FALSE"));
+}
+
+void AT2PlayGameState::SetPortalRemainingTime(float Time)
+{
+    if (GetLocalRole() != ROLE_Authority) return;
+
+    PortalRemainingTime = Time;
+}
+
+void AT2PlayGameState::OnRep_PortalActive()
+{
+    UE_LOG(LogTemp, Warning, TEXT("OnRep_PortalActive: %s"), bIsPortalActive ? TEXT("ACTIVE") : TEXT("INACTIVE"));
+}
+
+void AT2PlayGameState::OnRep_PortalRemainingTime()
+{
+    // UI에서 바인딩으로 자동 업데이트됨
 }
 
 void AT2PlayGameState::OnRep_CollectedKeys()

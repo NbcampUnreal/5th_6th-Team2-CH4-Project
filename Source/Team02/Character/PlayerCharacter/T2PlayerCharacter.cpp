@@ -14,7 +14,6 @@
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameMode/T2GameModeBase.h"
-#include "GameMode/TestGameMode.h"
 #include "Gimmick/Player/ItemBase.h"
 #include "GameFramework/Controller.h"
 #include "Blueprint/UserWidget.h"
@@ -222,7 +221,6 @@ float AT2PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dam
 	return DamageAmount;
 }
 
-// ★★★ 수정된 OnDeath 함수 ★★★
 void AT2PlayerCharacter::OnDeath()
 {
 	// 이미 죽은 상태면 무시 (중복 호출 방지)
@@ -245,7 +243,13 @@ void AT2PlayerCharacter::OnDeath()
 	// 3. 충돌 비활성화 (킬러가 더 이상 때릴 수 없게)
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 4. GameMode에 알림 (팀원이 요청한 방식)
+	// 4. 결과창 표시 (사망)
+	if (AT2BaseController* T2PC = Cast<AT2BaseController>(GetController()))
+	{
+		T2PC->Client_ShowPersonalResult(false);  // false = 사망
+	}
+
+	// 5. GameMode에 알림
 	AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>();
 	if (GM)
 	{
@@ -254,12 +258,11 @@ void AT2PlayerCharacter::OnDeath()
 		UE_LOG(LogTemp, Warning, TEXT("GameMode->OnCharacterDead called"));
 	}
 
-	// 5. 일정 시간 후 시체 제거 (3초)
+	// 6. 일정 시간 후 시체 제거 (3초)
 	FTimerHandle DeathTimerHandle;
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, this, &AT2PlayerCharacter::DestroyAfterDeath, 3.0f, false);
 }
 
-// ★★★ 추가: 사망 후 시체 제거 ★★★
 void AT2PlayerCharacter::DestroyAfterDeath()
 {
 	if (!HasAuthority()) return;

@@ -1,6 +1,5 @@
 #include "Gimmick/Portal/PortalActor.h"
 
-
 #include "EngineUtils.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -11,9 +10,10 @@
 #include "Components/PointLightComponent.h"
 #include "PlayerState/Player/SurvivorPlayerState.h"
 #include "T2PlayGameState.h"
+#include "T2PlayGameMod.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
-#include "GameFramework/SpectatorPawn.h"
+#include "Controller/T2BaseController.h"
 
 APortalActor::APortalActor()
 {
@@ -74,12 +74,16 @@ void APortalActor::ActivatePortal()
 	bIsActive = true;
 	RemainingTime = PortalTimeLimit;
 	
+	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
+	{
+		GS->SetPortalActive(true);
+		GS->SetPortalRemainingTime(RemainingTime);
+	}
+	
 	SpawnPortalEffects();
 
 	GetWorldTimerManager().SetTimer(PortalTimerHandle, this, &APortalActor::UpdateTimer, 1.0f, true);
 
-
-	
 	UE_LOG(LogTemp, Warning, TEXT("Portal Activated! Time Limit: %.0f seconds"), PortalTimeLimit);
 }
 
@@ -113,17 +117,17 @@ void APortalActor::SpawnPortalEffects()
 		
 		if (PortalEffect)
 		{
-			UE_LOG(LogTemp, Warning, TEXT(" Niagara Effect spawned successfully! (Role: %s)"),
+			UE_LOG(LogTemp, Warning, TEXT("Niagara Effect spawned successfully! (Role: %s)"),
 				HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT(" Failed to spawn Niagara Effect!"));
+			UE_LOG(LogTemp, Error, TEXT("Failed to spawn Niagara Effect!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("️ PortalNiagaraSystem is not set! Please assign it in Blueprint."));
+		UE_LOG(LogTemp, Warning, TEXT("PortalNiagaraSystem is not set! Please assign it in Blueprint."));
 	}
 	
 	if (PortalLight)
@@ -185,48 +189,46 @@ void APortalActor::OnPlayerEnterPortal(AT2PlayerCharacter* Player)
 	ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(Player->GetPlayerState());
 	if (!SurvivorPS) return;
 
-	if (EnteredPlayers.Contains(SurvivorPS))
+	// Already escaped check
+	if (SurvivorPS->bIsEscaped)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Player %s already entered portal"), *SurvivorPS->GetPlayerName());
+		UE_LOG(LogTemp, Warning, TEXT("Player %s already escaped"), *SurvivorPS->GetPlayerName());
 		return;
 	}
 
+	if (EnteredPlayers.Contains(SurvivorPS))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player %s already in EnteredPlayers list"), *SurvivorPS->GetPlayerName());
+		return;
+	}
+
+	// Set escaped state (GameState count handled inside SetEscaped)
 	SurvivorPS->SetEscaped();
 	EnteredPlayers.Add(SurvivorPS);
 
-	UE_LOG(LogTemp, Warning, TEXT("Player %s ESCAPED through portal! (%d players escaped) - VICTORY!"), 
+	UE_LOG(LogTemp, Warning, TEXT("Player %s ESCAPED through portal! (%d players escaped)"), 
 		*SurvivorPS->GetPlayerName(), EnteredPlayers.Num());
 
-	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
+	// Show result UI (escaped) - Client RPC
+	APlayerController* PC = Cast<APlayerController>(Player->GetController());
+	if (AT2BaseController* T2PC = Cast<AT2BaseController>(PC))
 	{
-		GS->OnSurvivorEscaped();
+		T2PC->Client_ShowPersonalResult(true);
 	}
 	
-	APlayerController* PC = Cast<APlayerController>(Player->GetController());
-	if (PC)
+	// Hide player and disable collision (only for the escaped player)
+	Player->SetActorHiddenInGame(true);
+	Player->SetActorEnableCollision(false);
+	
+	// DON'T call DisableInput here - it causes issues with other players
+	// The result UI will handle input mode for the escaped player
+
+	UE_LOG(LogTemp, Warning, TEXT("Player %s hidden"), *SurvivorPS->GetPlayerName());
+
+	// Check win conditions
+	if (AT2PlayGameMod* GM = GetWorld()->GetAuthGameMode<AT2PlayGameMod>())
 	{
-		Player->SetActorHiddenInGame(true);
-		Player->SetActorEnableCollision(false);
-
-		PC->UnPossess();
-		PC->ChangeState(NAME_Spectating);
-		
-		FVector SpectatorLocation = GetActorLocation() + FVector(0, 0, 500);
-		PC->SetControlRotation(FRotator(-45, 0, 0));
-		
-		if (ASpectatorPawn* SpectatorPawn = PC->GetSpectatorPawn())
-		{
-			SpectatorPawn->SetActorLocation(SpectatorLocation);
-		}
-
-		UE_LOG(LogTemp, Warning, TEXT("Player %s switched to spectator mode in main map"), *SurvivorPS->GetPlayerName());
-	}
-
-	if (AreAllSurvivorsEntered())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("All alive survivors entered portal! Transitioning to next map..."));
-		GetWorldTimerManager().ClearTimer(PortalTimerHandle);
-		TransitionToNextMap();
+		GM->CheckWinConditions();
 	}
 }
 
@@ -254,14 +256,12 @@ void APortalActor::UpdateTimer()
 
 	RemainingTime -= 1.0f;
 
-	AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
-	if (GS)
+	// Update GameState with remaining time
+	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Portal Time Remaining: %.0f seconds (%d/%d players escaped)"),
-			RemainingTime, EnteredPlayers.Num(), GS->GetAliveSurvivorCount());
+		GS->SetPortalRemainingTime(RemainingTime);
 	}
 
-	// 제한시간 종료
 	if (RemainingTime <= 0.0f)
 	{
 		OnPortalTimeExpired();
@@ -272,21 +272,18 @@ void APortalActor::OnPortalTimeExpired()
 {
 	if (!HasAuthority()) return;
 
-	UE_LOG(LogTemp, Warning, TEXT("Portal time expired! (2 minutes passed)"));
+	UE_LOG(LogTemp, Warning, TEXT("Portal time expired!"));
 	GetWorldTimerManager().ClearTimer(PortalTimerHandle);
+	
+	bIsActive = false;
 
-	KillRemainingPlayers();
+	// Notify GameState portal is closed
+	if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
+	{
+		GS->SetPortalActive(false);
+	}
 
-	if (EnteredPlayers.Num() > 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%d player(s) escaped successfully! Transitioning to next map..."), 
-			EnteredPlayers.Num());
-		TransitionToNextMap();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No players escaped portal. All players failed."));
-	}
+	UE_LOG(LogTemp, Warning, TEXT("Portal closed. %d player(s) escaped. Game continues."), EnteredPlayers.Num());
 }
 
 bool APortalActor::AreAllSurvivorsEntered()
@@ -298,60 +295,15 @@ bool APortalActor::AreAllSurvivorsEntered()
 
 	int32 AliveSurvivors = GS->GetAliveSurvivorCount();
 	
-	UE_LOG(LogTemp, Log, TEXT("Checking completion - Alive Survivors: %d, Entered: %d"), 
-		AliveSurvivors, EnteredPlayers.Num());
-
-	return EnteredPlayers.Num() >= AliveSurvivors;
+	return AliveSurvivors <= 0;
 }
 
 void APortalActor::KillRemainingPlayers()
 {
-	if (!HasAuthority()) return;
-
-	TArray<AActor*> FoundCharacters;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AT2PlayerCharacter::StaticClass(), FoundCharacters);
-
-	int32 KilledCount = 0;
-	for (AActor* Actor : FoundCharacters)
-	{
-		AT2PlayerCharacter* Player = Cast<AT2PlayerCharacter>(Actor);
-		if (!Player) continue;
-
-		ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(Player->GetPlayerState());
-		if (!SurvivorPS) continue;
-
-		if (!SurvivorPS->bIsEscaped && !SurvivorPS->bIsDead)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Player %s failed to enter portal within time limit - KILLED"), 
-				*SurvivorPS->GetPlayerName());
-			
-			SurvivorPS->bIsDead = true;
-			Player->OnDeath();
-			KilledCount++;
-
-			if (AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>())
-			{
-				GS->OnSurvivorDied();
-			}
-		}
-	}
-	
-	if (KilledCount > 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Portal timeout: %d player(s) killed for not entering in time"), KilledCount);
-	}
+	// Not used
 }
 
 void APortalActor::TransitionToNextMap()
 {
-	if (!HasAuthority()) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("Transitioning to next map: %s"), *NextMapName.ToString());
-	UE_LOG(LogTemp, Warning, TEXT("Escaped Players: %d"), EnteredPlayers.Num());
-
-	FTimerHandle TransitionTimer;
-	GetWorldTimerManager().SetTimer(TransitionTimer, [this]()
-	{
-		GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Library_Pack/Maps/%s?listen"), *NextMapName.ToString()));
-	}, 2.0f, false);
+	// Not used - game end handled by T2PlayGameMod::EndMatch()
 }

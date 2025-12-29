@@ -5,6 +5,7 @@
 #include "UW_SurvivorHUD.generated.h"
 
 class UImage;
+class UTextBlock;
 class ASurvivorPlayerState;
 
 UCLASS()
@@ -33,6 +34,17 @@ protected:
     UPROPERTY(meta = (BindWidget))
     class UProgressBar* Battery;
 
+    // ★ 키 카운트 텍스트 (예: "3 / 6")
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* KeyCountText;
+
+    // ★ 포탈 타이머 관련 (평소엔 숨김)
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* PortalTimerText;
+
+    UPROPERTY(meta = (BindWidgetOptional))
+    class UCanvasPanel* PortalTimerPanel;  // 포탈 타이머 전체를 감싸는 패널 (숨김/표시용)
+
 private:
     UFUNCTION()
     void UpdateHP(float CurrentHP, float MaxHP);
@@ -41,6 +53,12 @@ private:
     void UpdateBattery(float CurrentBattery, float MaxBattery);
 
     void TryBindToPlayerState();
+
+    // ★ 키 카운트 업데이트
+    void UpdateKeyCount();
+
+    // ★ 포탈 타이머 업데이트
+    void UpdatePortalTimer();
 
     FDelegateHandle HPChangedHandle;
     FDelegateHandle BatteryChangedHandle;

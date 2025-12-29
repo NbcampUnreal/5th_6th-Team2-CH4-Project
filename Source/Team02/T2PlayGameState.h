@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameState/T2GameStateBase.h"
+#include "GameFramework/GameStateBase.h"
 #include "T2PlayGameState.generated.h"
 
 UENUM(BlueprintType)
@@ -23,7 +23,7 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    // ========== ��� ���� ���� ==========
+    // ========== 매치 관련 변수 ==========
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
     int32 RequiredKeys = 6;
@@ -43,7 +43,7 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_MatchResult, BlueprintReadOnly, Category = "Match")
     EMatchResult MatchResult = EMatchResult::None;
 
-    // ========== ���� ���� �Լ� ==========
+    // ========== 키 관련 ==========
     UPROPERTY(ReplicatedUsing = OnRep_KeyCount, BlueprintReadOnly, Category = "Keys")
     int32 TotalKeyCount = 0;
 
@@ -56,14 +56,39 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Keys")
     int32 GetKeyCount() const { return TotalKeyCount; }
 
+    UFUNCTION(BlueprintCallable, Category = "Keys")
+    int32 GetRequiredKeys() const { return RequiredKeys; }
+
     UFUNCTION(BlueprintCallable, Category = "Match")
     int32 GetAliveSurvivorCount() const { return SurvivorsAlive; }
 
     UFUNCTION(BlueprintCallable, Category = "Match")
     int32 GetEscapedSurvivorCount() const { return SurvivorsEscaped; }
 
+    // ========== 포탈 관련 ==========
+    UPROPERTY(ReplicatedUsing = OnRep_PortalActive, BlueprintReadOnly, Category = "Portal")
+    bool bIsPortalActive = false;
 
+    UPROPERTY(ReplicatedUsing = OnRep_PortalRemainingTime, BlueprintReadOnly, Category = "Portal")
+    float PortalRemainingTime = 0.0f;
 
+    UFUNCTION(BlueprintCallable, Category = "Portal")
+    bool IsPortalActive() const { return bIsPortalActive; }
+
+    UFUNCTION(BlueprintCallable, Category = "Portal")
+    float GetPortalRemainingTime() const { return PortalRemainingTime; }
+
+    // 서버에서 호출
+    void SetPortalActive(bool bActive);
+    void SetPortalRemainingTime(float Time);
+
+    UFUNCTION()
+    void OnRep_PortalActive();
+
+    UFUNCTION()
+    void OnRep_PortalRemainingTime();
+
+    // ========== 기존 함수들 ==========
     void AddCollectedKey();
 
     void OnSurvivorDied();
