@@ -31,26 +31,11 @@ void AExitKey::CompleteInteract(AT2PlayerCharacter* Player)
 	
 	if (IsValid(Player))
 	{
-		AT2GameStateBase* GS = GetWorld()->GetGameState<AT2GameStateBase>();
+		AT2PlayGameState* GS = GetWorld()->GetGameState<AT2PlayGameState>();
 		if (IsValid(GS))
 		{
-			int32 OldCount = GS->GetKeyCount();
+			int32 OldCount = GS->TotalKeyCount; 
 			GS->AddKeyCount(1);
-
-			UE_LOG(LogTemp, Warning, TEXT(" Key collected! Count: %d → %d"), OldCount, GS->GetKeyCount());
-	
-			
-			AT2GameModeBase* GM = Cast<AT2GameModeBase>(GetWorld()->GetAuthGameMode());
-			if (IsValid(GM))
-			{
-				GM->OnKeyCollected(GS->GetKeyCount());
-				UE_LOG(LogTemp, Warning, TEXT(" GameMode::OnKeyCollected(%d) called"), 
-					GS->GetKeyCount());
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT(" GameMode not found!"));
-			}
 		}
 
 		Destroy();

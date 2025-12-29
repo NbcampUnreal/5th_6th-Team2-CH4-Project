@@ -1,9 +1,13 @@
 #include "T2PlayGameMod.h"
+
+#include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
+#include "Gimmick/Portal/PortalActor.h"
 #include "PlayerState/T2PlayerState.h"
 #include "Gimmick/ItemSpawner.h"
 #include "EngineUtils.h"
+#include "Controller/T2BaseController.h"
 
 AT2PlayGameMod::AT2PlayGameMod()
 {
@@ -32,7 +36,7 @@ void AT2PlayGameMod::PreLogin(const FString& Options, const FString& Address, co
     if (GetNumPlayers() >= RequiredPlayers)
     {
         ErrorMessage = TEXT("Server is full. Maximum 3 players allowed.");
-        UE_LOG(LogTemp, Warning, TEXT("PreLogin:  Rejected player - server full (%d/%d)"), GetNumPlayers(), RequiredPlayers);
+        UE_LOG(LogTemp, Warning, TEXT("PreLogin: Rejected player - server full (%d/%d)"), GetNumPlayers(), RequiredPlayers);
         return;
     }
 
@@ -47,7 +51,7 @@ void AT2PlayGameMod::PostLogin(APlayerController* NewPlayer)
 
     ConnectedPlayers.AddUnique(NewPlayer);
 
-    UE_LOG(LogTemp, Warning, TEXT("PostLogin - Player joined.  Total:  %d/%d"),
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin - Player joined. Total: %d/%d"),
         ConnectedPlayers.Num(), RequiredPlayers);
 
     AssignRolesIfReady();
@@ -65,7 +69,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("=== AssignRolesIfReady:  Assigning roles!  ==="));
+    UE_LOG(LogTemp, Warning, TEXT("=== AssignRolesIfReady: Assigning roles! ==="));
 
     bRolesAssigned = true;
 
@@ -77,7 +81,6 @@ void AT2PlayGameMod::AssignRolesIfReady()
         ShuffledPlayers.Swap(i, j);
     }
 
-    // 스폰 포인트 미리 가져오기
     TArray<AActor*> KillerSpawnPoints;
     TArray<AActor*> SurvivorSpawnPoints;
     UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("KillerSpawn"), KillerSpawnPoints);
@@ -124,7 +127,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
 
         PS->SetPlayerRole(AssignedRole);
 
-        UE_LOG(LogTemp, Warning, TEXT("Player %d assigned:  %s (IsLocal: %s)"),
+        UE_LOG(LogTemp, Warning, TEXT("Player %d assigned: %s (IsLocal: %s)"),
             i,
             AssignedRole == EPlayerRole::Killer ? TEXT("KILLER") : TEXT("SURVIVOR"),
             PC->IsLocalPlayerController() ? TEXT("YES") : TEXT("NO"));
@@ -132,24 +135,23 @@ void AT2PlayGameMod::AssignRolesIfReady()
         APawn* OldPawn = PC->GetPawn();
         if (OldPawn)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Player %d: Destroying old pawn:  %s"), i, *OldPawn->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("Player %d: Destroying old pawn: %s"), i, *OldPawn->GetName());
             PC->UnPossess();
             OldPawn->Destroy();
         }
 
-        // 직접 스폰
         if (SpawnPoint && PawnClass)
         {
-            FVector SpawnLocation = SpawnPoint->GetActorLocation();
-            FRotator SpawnRotation = SpawnPoint->GetActorRotation();
+            FVector SpawnLoc = SpawnPoint->GetActorLocation();
+            FRotator SpawnRot = SpawnPoint->GetActorRotation();
 
             FActorSpawnParameters SpawnParams;
             SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
             APawn* NewPawn = GetWorld()->SpawnActor<APawn>(
                 PawnClass,
-                SpawnLocation,
-                SpawnRotation,
+                SpawnLoc,
+                SpawnRot,
                 SpawnParams
             );
 
@@ -157,7 +159,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
             {
                 PC->Possess(NewPawn);
                 NewPawn->EnableInput(PC);
-                UE_LOG(LogTemp, Warning, TEXT("Player %d:  Spawned at %s (%s), NewPawn = %s"),
+                UE_LOG(LogTemp, Warning, TEXT("Player %d: Spawned at %s (%s), NewPawn = %s"),
                     i,
                     *SpawnPoint->GetName(),
                     AssignedRole == EPlayerRole::Killer ? TEXT("KillerSpawn") : TEXT("SurvivorSpawn"),
@@ -165,12 +167,11 @@ void AT2PlayGameMod::AssignRolesIfReady()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("Player %d: Failed to spawn pawn! "), i);
+                UE_LOG(LogTemp, Error, TEXT("Player %d: Failed to spawn pawn!"), i);
             }
         }
         else
         {
-            // 스폰 포인트나 클래스 없으면 기존 방식
             UE_LOG(LogTemp, Warning, TEXT("Player %d: No spawn point or class, using RestartPlayer"), i);
             RestartPlayer(PC);
             APawn* NewPawn = PC->GetPawn();
@@ -197,6 +198,7 @@ void AT2PlayGameMod::AssignRolesIfReady()
 
     UE_LOG(LogTemp, Warning, TEXT("Roles assigned - Killer: 1, Survivors: %d"), SurvivorCount);
 }
+
 void AT2PlayGameMod::Logout(AController* Exiting)
 {
     APlayerController* PC = Cast<APlayerController>(Exiting);
@@ -234,7 +236,7 @@ UClass* AT2PlayGameMod::GetDefaultPawnClassForController_Implementation(AControl
     }
     else if (InRole == EPlayerRole::Survivor && SurvivorClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("GetDefaultPawnClass:  Survivor"));
+        UE_LOG(LogTemp, Warning, TEXT("GetDefaultPawnClass: Survivor"));
         return SurvivorClass;
     }
 
@@ -247,7 +249,7 @@ AActor* AT2PlayGameMod::ChoosePlayerStart_Implementation(AController* Player)
     EPlayerRole InRole = GetPlayerRole(Player);
     FName SpawnTag = (InRole == EPlayerRole::Killer) ? FName("KillerSpawn") : FName("SurvivorSpawn");
 
-    UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart:  Role = %d, Tag = %s"),
+    UE_LOG(LogTemp, Warning, TEXT("ChoosePlayerStart: Role = %d, Tag = %s"),
         (int32)InRole, *SpawnTag.ToString());
 
     TArray<AActor*> SpawnPoints;
@@ -275,21 +277,18 @@ void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
 
     UE_LOG(LogTemp, Warning, TEXT("=== OnCharacterDead Called ==="));
 
-    // GameState에서 생존자 수 감소
     AT2PlayGameState* GS = GetGameState<AT2PlayGameState>();
     if (GS)
     {
         GS->OnSurvivorDied();
-        UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive decreased to:  %d"), GS->SurvivorsAlive);
+        UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive decreased to: %d"), GS->SurvivorsAlive);
     }
 
-    // 승패 조건 체크
     CheckWinConditions();
 }
 
 void AT2PlayGameMod::OnPlayerDied(APlayerController* Player)
 {
-    // OnCharacterDead로 통합
     OnCharacterDead(Player);
 }
 
@@ -297,12 +296,9 @@ void AT2PlayGameMod::OnPlayerEscaped(APlayerController* Player)
 {
     if (!HasAuthority()) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("Player Escaped! "));
+    UE_LOG(LogTemp, Warning, TEXT("Player Escaped!"));
 
-    if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
-    {
-        GS->OnSurvivorEscaped();
-    }
+    // Note: GameState count is handled in SurvivorPlayerState::SetEscaped()
 
     CheckWinConditions();
 }
@@ -327,10 +323,10 @@ void AT2PlayGameMod::CheckWinConditions()
     UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
         GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
 
-    // 모든 생존자가 죽거나 탈출했을 때만 게임 종료
+    // Only end game when ALL survivors are dead or escaped
     if (GS->SurvivorsAlive <= 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No survivors alive! "));
+        UE_LOG(LogTemp, Warning, TEXT("No survivors alive!"));
 
         if (GS->SurvivorsEscaped == 0)
         {
@@ -360,22 +356,126 @@ void AT2PlayGameMod::EndMatch(EMatchResult Result)
     }
 
     FString ResultStr;
+    bool bSurvivorWin = false;
+    
     switch (Result)
     {
-    case EMatchResult::KillerWin:   ResultStr = TEXT("Killer Wins!"); break;
-    case EMatchResult::SurvivorWin: ResultStr = TEXT("Survivors Win!"); break;
-    default: ResultStr = TEXT("Draw"); break;
+    case EMatchResult::KillerWin:
+        ResultStr = TEXT("Killer Wins!");
+        bSurvivorWin = false;
+        break;
+    case EMatchResult::SurvivorWin:
+        ResultStr = TEXT("Survivors Win!");
+        bSurvivorWin = true;
+        break;
+    default:
+        ResultStr = TEXT("Draw");
+        bSurvivorWin = false;
+        break;
     }
 
     UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED: %s ==="), *ResultStr);
 
+    // Show result to all players
+    for (APlayerController* PC : ConnectedPlayers)
+    {
+        if (AT2BaseController* T2PC = Cast<AT2BaseController>(PC))
+        {
+            T2PC->Client_ShowMatchResult(bSurvivorWin);
+        }
+    }
+
+    // Travel to title after 5 seconds
     FTimerHandle TimerHandle;
     GetWorldTimerManager().SetTimer(TimerHandle, [this]()
         {
             UWorld* World = GetWorld();
             if (World)
             {
-                World->ServerTravel(TEXT("/Game/Library_Pack/Maps/Example? listen"));
+                World->ServerTravel(TEXT("/Game/Team02/Blueprint/map/title?listen"));
             }
-        }, 3.0f, false);
+        }, 5.0f, false);
+}
+
+void AT2PlayGameMod::OnKeyCollected(int32 CurrentTotalKeys)
+{
+    if (!HasAuthority()) return;
+
+    if (bPortalSpawned)
+    {
+        return;
+    }
+    
+    if (CurrentTotalKeys >= KeysRequiredForPortal)
+    {
+        bPortalSpawned = true;
+        SpawnPortalAtRandomLocation();
+    }
+}
+
+void AT2PlayGameMod::SpawnPortalAtRandomLocation()
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (!PortalClass)
+    {
+        return;
+    }
+
+    FVector SpawnLoc = FVector::ZeroVector;
+    bool bFoundLocation = false;
+
+    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    if (NavSys)
+    {
+        FNavLocation RandomLocation;
+        if (NavSys->GetRandomReachablePointInRadius(FVector::ZeroVector, 5000.f, RandomLocation))
+        {
+            SpawnLoc = RandomLocation.Location + FVector(0, 0, 100);
+            bFoundLocation = true;
+        }
+    }
+
+    if (!bFoundLocation)
+    {
+        TArray<AActor*> PlayerStarts;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+        
+        if (PlayerStarts.Num() > 0)
+        {
+            int32 RandomIndex = FMath::RandRange(0, PlayerStarts.Num() - 1);
+            SpawnLoc = PlayerStarts[RandomIndex]->GetActorLocation() + FVector(500, 500, 100);
+            bFoundLocation = true;
+        }
+        else
+        {
+            SpawnLoc = FVector(0, 0, 100);
+            bFoundLocation = true;
+        }
+    }
+
+    if (bFoundLocation)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+        
+        APortalActor* Portal = GetWorld()->SpawnActor<APortalActor>(
+            PortalClass, 
+            SpawnLoc, 
+            FRotator::ZeroRotator, 
+            SpawnParams
+        );
+        
+        if (Portal)
+        {
+            Portal->PortalTimeLimit = PortalDuration;
+            Portal->ActivatePortal();
+            
+            UE_LOG(LogTemp, Warning, TEXT("Portal spawned successfully at %s! Duration: %.0f seconds"), 
+                *SpawnLoc.ToString(), PortalDuration);
+        }
+    }
 }

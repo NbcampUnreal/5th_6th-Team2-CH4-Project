@@ -78,8 +78,6 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 					continue;
 				}
 
-				UE_LOG(LogTemp, Warning, TEXT("SERVER: Box Sweep Hit Pawn: %s"), *HitPawn->GetName());
-
 				ASurvivorPlayerState* SurvivorPS = Cast<ASurvivorPlayerState>(HitPawn->GetPlayerState());
 				
 				if (!SurvivorPS)
@@ -88,12 +86,8 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 					{
 						continue;
 					}
-					
-					UE_LOG(LogTemp, Error, TEXT("SERVER: Hit Pawn %s has NO SurvivorPlayerState."), *HitPawn->GetName());
 					continue;
 				}
-				
-				UE_LOG(LogTemp, Warning, TEXT("SERVER HIT SUCCESS: Target %s, Applying Damage."), *HitPawn->GetName());
 				
 				SurvivorPS->ApplyDamage(40.f);
 				KillerCharacter->OnHitSuccessful(HitPawn, HitResult.ImpactPoint);
@@ -101,19 +95,6 @@ void UKillerAttackHitBox::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequ
 			}
 		}
 	}
-
-	FVector BoxCenter = (StartLocation + EndLocation) / 2.0f;
-	DrawDebugBox(
-		MeshComp->GetWorld(),
-		BoxCenter,
-		BoxHalfSize,
-		BoxRotation,
-		bHit ? FColor::Red : FColor::Green,
-		false,
-		FrameDeltaTime * 2.0f,
-		0,
-		3.0f
-	);
 
 	PreviousWeaponLocation = MeshComp->GetSocketLocation(TEXT("AxeSocket"));
 }

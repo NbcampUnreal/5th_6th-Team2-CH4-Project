@@ -118,6 +118,8 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayAttackMontage();
 
+	void ResetHitActors();
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Attack")
 	UAnimMontage* AttackMontage;
@@ -135,6 +137,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
+
+	UPROPERTY()
+	TArray<AActor*> HitActorsThisAttack;
 
 #pragma endregion
 	

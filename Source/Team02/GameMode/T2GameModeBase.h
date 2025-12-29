@@ -61,23 +61,5 @@ private:
 
     AActor* FindCameraByTag(FName Tag);
     void SwitchWidget(TSubclassOf<UUserWidget> NewWidgetClass);
-
-#pragma region potal system
-public:
-    void OnKeyCollected(int32 CurrentTotalKeys);
-
-protected:
-    UPROPERTY(EditAnywhere, Category = "Gimmick")
-    TSubclassOf<class APortalActor> PortalClass;
-
-    UPROPERTY(EditAnywhere, Category = "Gimmick")
-    int32 KeysRequiredForPortal = 6;
-
-    UPROPERTY(EditAnywhere, Category = "Gimmick")
-    float PortalDuration = 120.0f; // 2분
-
-private:
-    void SpawnPortalAtRandomLocation();
     
-#pragma endregion 
 };

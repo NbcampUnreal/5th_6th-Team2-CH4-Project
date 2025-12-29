@@ -20,7 +20,7 @@
 
 AT2KillerCharacter::AT2KillerCharacter()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 250.f;
 	
 	FPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FPSCamera"));
 	FPSCamera->SetupAttachment(GetMesh(), TEXT("head"));
@@ -163,8 +163,6 @@ void AT2KillerCharacter::HandleLandTrapInput(const FInputActionValue& InValue)
 
 void AT2KillerCharacter::InputAttack(const FInputActionValue& InValue)
 {
-	UE_LOG(LogTemp, Warning, TEXT("InputAttack called"));
-
 	if (bIsAttacking) return;
 	if (!IsLocallyControlled()) return;
 
@@ -173,7 +171,6 @@ void AT2KillerCharacter::InputAttack(const FInputActionValue& InValue)
 
 void AT2KillerCharacter::InputDash(const FInputActionValue& InValue)
 {
-	UE_LOG(LogTemp, Warning, TEXT("InputDash called"));
 	if (IsLocallyControlled())
 	{
 		ServerRPCDash();
@@ -195,8 +192,6 @@ void AT2KillerCharacter::ToggleCameraView(const FInputActionValue& InValue)
 
 			GetCharacterMovement()->bOrientRotationToMovement = true; 
 			GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
-			
-			UKismetSystemLibrary::PrintString(this, TEXT("3rd Person View"), true, true, FLinearColor::Yellow, 2.f);
 		}
 		else
 		{
@@ -207,8 +202,6 @@ void AT2KillerCharacter::ToggleCameraView(const FInputActionValue& InValue)
 			
 			GetCharacterMovement()->bOrientRotationToMovement = false;
 			GetCharacterMovement()->RotationRate = FRotator(0.0f, 3600.0f, 0.0f);
-			
-			UKismetSystemLibrary::PrintString(this, TEXT("1st Person View"), true, true, FLinearColor::Yellow, 2.f);
 		}
 		
 		bIsFirstPerson = !bIsFirstPerson;
@@ -226,8 +219,6 @@ void AT2KillerCharacter::StartWalk()
 	UpdateMovementSpeed();
 
 	ServerToggleWalk(true);  
-	
-	UKismetSystemLibrary::PrintString(this, TEXT("Walk Started"), true, true, FLinearColor::Blue, 1.f);
 }
 
 void AT2KillerCharacter::EndWalk()
@@ -241,8 +232,6 @@ void AT2KillerCharacter::EndWalk()
 	UpdateMovementSpeed();
 
 	ServerToggleWalk(false);  
-	
-	UKismetSystemLibrary::PrintString(this, TEXT("Walk Ended (Run)"), true, true, FLinearColor::Blue, 1.f);
 }
 
 void AT2KillerCharacter::AttackEnd()
@@ -250,7 +239,7 @@ void AT2KillerCharacter::AttackEnd()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		bIsAttacking = false;
-		UE_LOG(LogTemp, Warning, TEXT("Attack Ended, bIsAttacking reset to false."));
+		HitActorsThisAttack.Empty();
 	}
 }
 
@@ -261,6 +250,17 @@ void AT2KillerCharacter::OnHitSuccessful(APawn* VictimPawn, const FVector& Impac
 		return;
 	}
 
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (HitActorsThisAttack.Contains(VictimPawn))
+	{
+		return;
+	}
+
+	HitActorsThisAttack.Add(VictimPawn);
 	MulticastRPC_PlayHitSound(ImpactPoint);
 }
 
@@ -270,6 +270,11 @@ void AT2KillerCharacter::PlayAttackHitSound(const FVector& Location)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, AttackHitSound, Location);
 	}
+}
+
+void AT2KillerCharacter::ResetHitActors()
+{
+	HitActorsThisAttack.Empty();
 }
 
 void AT2KillerCharacter::MulticastPlayAttackMontage_Implementation()
@@ -282,8 +287,6 @@ void AT2KillerCharacter::MulticastPlayAttackMontage_Implementation()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, AttackSwingSound, GetActorLocation());
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Montage Playing on %s"), HasAuthority() ? TEXT("Server") : TEXT("Client"));
 }
 
 void AT2KillerCharacter::MulticastRPC_PlayHitSound_Implementation(FVector ImpactLocation)
@@ -301,8 +304,6 @@ void AT2KillerCharacter::MulticastRPC_PlayHitSound_Implementation(FVector Impact
 
 void AT2KillerCharacter::ClientRPC_OnLandTrapSuccess_Implementation()
 {
-	UKismetSystemLibrary::PrintString(this, TEXT("LandTrap Successfully Installed! (Client Confirmed)"), true, true, FLinearColor::Green, 2.f);
-
 	if (LandTrapSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, LandTrapSound, GetActorLocation());
@@ -311,13 +312,10 @@ void AT2KillerCharacter::ClientRPC_OnLandTrapSuccess_Implementation()
 
 void AT2KillerCharacter::ClientRPC_OnLandTrapDenied_Implementation()
 {
-	UKismetSystemLibrary::PrintString(this, TEXT("LandTrap Cooldown Active! (Client Denied)"), true, true, FLinearColor::Red, 2.f);
 }
 
 void AT2KillerCharacter::ClientRPC_OnDashSuccess_Implementation()
 {
-	UKismetSystemLibrary::PrintString(this, TEXT("Dash Success! (Client Confirmed)"), true, true, FLinearColor::Green, 2.f);
-    
 	if (DashSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DashSound, GetActorLocation());
@@ -330,7 +328,6 @@ void AT2KillerCharacter::ClientRPC_OnDashSuccess_Implementation()
 
 void AT2KillerCharacter::ClientRPC_OnDashDenied_Implementation()
 {
-	UKismetSystemLibrary::PrintString(this, TEXT("Dash Cooldown Active! (Client Denied)"), true, true, FLinearColor::Red, 2.f);
 }
 
 void AT2KillerCharacter::OnRep_IsWalking()
@@ -342,8 +339,6 @@ void AT2KillerCharacter::ServerToggleWalk_Implementation(bool bNewIsWalking)
 {
 	bIsWalking = bNewIsWalking;
 	UpdateMovementSpeed();
-	
-	UE_LOG(LogTemp, Warning, TEXT("SERVER: Walk state set to %s"), bIsWalking ? TEXT("TRUE") : TEXT("FALSE"));
 }
 
 void AT2KillerCharacter::UpdateMovementSpeed()
@@ -361,9 +356,6 @@ void AT2KillerCharacter::UpdateMovementSpeed()
 		RoleStr = TEXT("CLIENT (Local)");
 	else
 		RoleStr = TEXT("CLIENT (Remote)");
-		
-	UE_LOG(LogTemp, Warning, TEXT("%s: MaxWalkSpeed = %.0f | Walking = %s"), 
-		*RoleStr, NewMaxWalkSpeed, bIsWalking ? TEXT("TRUE") : TEXT("FALSE"));
 }
 
 void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
@@ -393,9 +385,6 @@ void AT2KillerCharacter::PlayFootstepSound(bool bIsLeftFoot)
 		VolumeToUse, 
 		1.0f 
 	);
-
-	FString FootstepType = bIsWalking ? TEXT("Walk") : TEXT("Run");
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Footstep: %s (Vol: %.2f) at %s"), *FootstepType, VolumeToUse, *FootSocketName.ToString()), true, true, FLinearColor::White, 0.5f);
 }
 
 void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
@@ -404,7 +393,6 @@ void AT2KillerCharacter::ServerRPCSpawnLandTrap_Implementation()
 	{
 		if (CooldownComponent->GetIsLandTrapOnCooldown())
 		{
-			UKismetSystemLibrary::PrintString(this, TEXT("LandTrap Cooldown Active! (Server Denied)"), true, true, FLinearColor::Red, 2.f);
 			ClientRPC_OnLandTrapDenied(); 
 			return;
 		}
@@ -438,7 +426,6 @@ void AT2KillerCharacter::ServerRPCDash_Implementation()
 {
 	if (IsValid(CooldownComponent) && CooldownComponent->GetIsDashOnCooldown()) 
 	{
-		UKismetSystemLibrary::PrintString(this, TEXT("Dash Cooldown Active! (Server Denied)"), true, true, FLinearColor::Red, 2.f);
 		ClientRPC_OnDashDenied(); 
 		return;
 	}
@@ -478,6 +465,8 @@ void AT2KillerCharacter::ServerAttack_Implementation()
 	if (bIsAttacking || !AttackMontage) return;
 
 	bIsAttacking = true;
+
+	ResetHitActors();
 	
 	MulticastPlayAttackMontage();
 	
@@ -495,5 +484,6 @@ void AT2KillerCharacter::ServerAttack_Implementation()
 	else
 	{
 		bIsAttacking = false;
+		HitActorsThisAttack.Empty();
 	}
 }

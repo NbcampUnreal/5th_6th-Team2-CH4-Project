@@ -23,13 +23,10 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    // ========== ∞Ê±‚ ¡¯«‡ ªÛ≈¬ ==========
+    // ========== Îß§Ïπò Í¥ÄÎ†® Î≥ÄÏàò ==========
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
-    int32 RequiredKeys = 3;
-
-    UPROPERTY(ReplicatedUsing = OnRep_CollectedKeys, BlueprintReadOnly, Category = "Match")
-    int32 CollectedKeys = 0;
+    int32 RequiredKeys = 6;
 
     UPROPERTY(ReplicatedUsing = OnRep_EscapeGateOpen, BlueprintReadOnly, Category = "Match")
     bool bEscapeGateOpen = false;
@@ -46,13 +43,52 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_MatchResult, BlueprintReadOnly, Category = "Match")
     EMatchResult MatchResult = EMatchResult::None;
 
-    // ========== º≠πˆ ¿¸øÎ «‘ºˆ ==========
-
+    // ========== ÌÇ§ Í¥ÄÎ†® ==========
+    UPROPERTY(ReplicatedUsing = OnRep_KeyCount, BlueprintReadOnly, Category = "Keys")
+    int32 TotalKeyCount = 0;
 
     UFUNCTION(BlueprintCallable, Category = "Key")
     void AddKeyCount(int32 Amount = 1);
 
+    UFUNCTION()
+    void OnRep_KeyCount();
 
+    UFUNCTION(BlueprintCallable, Category = "Keys")
+    int32 GetKeyCount() const { return TotalKeyCount; }
+
+    UFUNCTION(BlueprintCallable, Category = "Keys")
+    int32 GetRequiredKeys() const { return RequiredKeys; }
+
+    UFUNCTION(BlueprintCallable, Category = "Match")
+    int32 GetAliveSurvivorCount() const { return SurvivorsAlive; }
+
+    UFUNCTION(BlueprintCallable, Category = "Match")
+    int32 GetEscapedSurvivorCount() const { return SurvivorsEscaped; }
+
+    // ========== Ìè¨ÌÉà Í¥ÄÎ†® ==========
+    UPROPERTY(ReplicatedUsing = OnRep_PortalActive, BlueprintReadOnly, Category = "Portal")
+    bool bIsPortalActive = false;
+
+    UPROPERTY(ReplicatedUsing = OnRep_PortalRemainingTime, BlueprintReadOnly, Category = "Portal")
+    float PortalRemainingTime = 0.0f;
+
+    UFUNCTION(BlueprintCallable, Category = "Portal")
+    bool IsPortalActive() const { return bIsPortalActive; }
+
+    UFUNCTION(BlueprintCallable, Category = "Portal")
+    float GetPortalRemainingTime() const { return PortalRemainingTime; }
+
+    // ÏÑúÎ≤ÑÏóêÏÑú Ìò∏Ï∂ú
+    void SetPortalActive(bool bActive);
+    void SetPortalRemainingTime(float Time);
+
+    UFUNCTION()
+    void OnRep_PortalActive();
+
+    UFUNCTION()
+    void OnRep_PortalRemainingTime();
+
+    // ========== Í∏∞Ï°¥ Ìï®ÏàòÎì§ ==========
     void AddCollectedKey();
 
     void OnSurvivorDied();
