@@ -17,14 +17,14 @@ AAT2SpectatorPawn::AAT2SpectatorPawn()
 	// Create SpringArm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 400.0f;
-	SpringArm->SocketOffset = FVector(0.0f, 0.0f, 150.0f);
+	SpringArm->TargetArmLength = 500.0f;  // 더 멀리
+	SpringArm->SocketOffset = FVector(0.0f, 0.0f, 100.0f);  // 추가 높이
 	SpringArm->bUsePawnControlRotation = false;
 	SpringArm->bDoCollisionTest = true;
 	SpringArm->bInheritPitch = false;
 	SpringArm->bInheritYaw = false;
 	SpringArm->bInheritRoll = false;
-	SpringArm->SetRelativeRotation(FRotator(-25.0f, 0.0f, 0.0f));  // 생성자에서 미리 설정
+	SpringArm->SetRelativeRotation(FRotator(-30.0f, 0.0f, 0.0f));  // 더 위에서 내려다보기
 
 	// Create Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -68,9 +68,10 @@ void AAT2SpectatorPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// Follow spectate target
-	if (SpectateTarget && IsValid(SpectateTarget))
+	if (SpectateTarget && IsValid(SpectateTarget) && !SpectateTarget->IsHidden())
 	{
 		FVector TargetLocation = SpectateTarget->GetActorLocation();
+		TargetLocation.Z += 150.0f;  // 캐릭터 머리 위쪽에서 시작
 		SetActorLocation(TargetLocation);
 		bLoggedTargetInvalid = false; // Reset log flag
 	}

@@ -68,6 +68,10 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_OnSpectateStarted();
 
+    // Client RPC to return to title screen
+    UFUNCTION(Client, Reliable)
+    void Client_ReturnToTitle();
+
 protected:
     virtual void SetupInputComponent() override;
 
@@ -134,6 +138,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void TransitionToLobby();
 
+    // Called when "Start" button is pressed on title screen
+    // Hosts the game and transitions to lobby
+    UFUNCTION(BlueprintCallable, Category = "Game")
+    void OnTitleStartButtonPressed();
+
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ShowLobbyUI();
 
@@ -146,11 +155,18 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_OnGameStarted();
 
+    // Called when player count changes in lobby
+    UFUNCTION(Client, Reliable)
+    void Client_OnPlayerCountChanged(int32 NewCount);
+
 private:
     void ShowKillerHUD();
     void ShowSurvivorHUD();
     void HideAllHUD();
     void BindRoleChangedDelegate();
+    
+    // Reset all UI state (called when returning to title)
+    void ResetAllUIState();
 
     UFUNCTION()
     void OnPlayerRoleChanged(EPlayerRole NewRole);

@@ -30,6 +30,7 @@ public:
 
     void CheckWinConditions();
     void EndMatch(EMatchResult Result);
+    void ReturnToTitle();
 
 protected:
     virtual void BeginPlay() override;
@@ -54,7 +55,7 @@ private:
     void AssignRolesIfReady();
     EPlayerRole GetPlayerRole(AController* Player) const;
 
-#pragma region potal system
+#pragma region Portal System
 public:
     void OnKeyCollected(int32 CurrentTotalKeys);
 
@@ -66,7 +67,7 @@ protected:
     int32 KeysRequiredForPortal = 6;
 
     UPROPERTY(EditAnywhere, Category = "Gimmick")
-    float PortalDuration = 120.0f; // 2분
+    float PortalDuration = 120.0f;
 
 private:
     bool bPortalSpawned = false;

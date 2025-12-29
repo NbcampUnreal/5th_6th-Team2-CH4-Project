@@ -20,7 +20,32 @@ void AT2GameModeBase::BeginPlay()
 
     UE_LOG(LogTemp, Warning, TEXT("T2GameModeBase::BeginPlay - Map: %s, IsTitleMap: %s"),
         *MapName, bIsTitleMap ? TEXT("YES") : TEXT("NO"));
-      APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+
+    // For title map, automatically start listen server if not already one
+    // This allows other PIE clients to reconnect after returning from gameplay
+    if (bIsTitleMap && HasAuthority())
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetNetMode() == NM_Standalone)
+        {
+            FURL URL;
+            URL.Map = TEXT("/Game/Team02/Blueprint/map/title");
+            
+            UE_LOG(LogTemp, Warning, TEXT("Title map - Starting as Listen Server for reconnection"));
+            
+            // Become a listen server so other clients can connect
+            if (World->Listen(URL))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Listen server started successfully on title map!"));
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Failed to start listen server on title map!"));
+            }
+        }
+    }
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
     if (PC)
     {
@@ -66,7 +91,7 @@ bool AT2GameModeBase::CanStartGame()
 
 void AT2GameModeBase::TryStartGame()
 {
-    UE_LOG(LogTemp, Warning, TEXT("TryStartGame:  Called!"));
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Called!"));
 
     if (!HasAuthority())
     {
@@ -81,7 +106,7 @@ void AT2GameModeBase::TryStartGame()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players! "), GetNumPlayers());
+    UE_LOG(LogTemp, Warning, TEXT("TryStartGame: Starting with %d players!"), GetNumPlayers());
 
     for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
@@ -91,20 +116,29 @@ void AT2GameModeBase::TryStartGame()
         }
     }
 
- 
-    GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Team02/Blueprint/map/%s? listen"), *GamePlayMapName.ToString()));
+    // Fixed: removed space before ?listen
+    GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Team02/Blueprint/map/%s?listen"), *GamePlayMapName.ToString()));
 }
 
 void AT2GameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
-    UE_LOG(LogTemp, Warning, TEXT("Lobby PostLogin: Player joined.  Total: %d"), GetNumPlayers());
+    UE_LOG(LogTemp, Warning, TEXT("Lobby PostLogin: Player joined. Total: %d"), GetNumPlayers());
+
+    // When a player joins the title screen lobby, notify all clients to update UI
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (AT2BaseController* PC = Cast<AT2BaseController>(It->Get()))
+        {
+            PC->Client_OnPlayerCountChanged(GetNumPlayers());
+        }
+    }
 }
 
 void AT2GameModeBase::Logout(AController* Exiting)
 {
     Super::Logout(Exiting);
-    UE_LOG(LogTemp, Warning, TEXT("Lobby Logout: Player left.  Total: %d"), GetNumPlayers() - 1);
+    UE_LOG(LogTemp, Warning, TEXT("Lobby Logout: Player left. Total: %d"), GetNumPlayers() - 1);
 }
 
 void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
@@ -114,7 +148,7 @@ void AT2GameModeBase::OnPlayerDead(AT2PlayerCharacter* DeadCharacter)
     {
         return;
     }
-    // ���� ��� - ���߿� ����
+    // Dead handling - implement later
 }
 
 AActor* AT2GameModeBase::FindCameraByTag(FName Tag)
@@ -146,8 +180,6 @@ void AT2GameModeBase::SwitchWidget(TSubclassOf<UUserWidget> NewWidgetClass)
         }
     }
 }
-
-
 
 UClass* AT2GameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
