@@ -88,6 +88,11 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayFootstep(const FVector& Location);
 
+	UFUNCTION(Client, Reliable)
+	void Client_UsePotionEffect();
+
+	UFUNCTION(Client, Reliable)
+	void Client_ChangeBatteryEffect();
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -152,6 +157,15 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Footstep")
 	USoundAttenuation* FootstepAttenuation;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemEffect")
+	USoundBase* ItemAcquisition;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemEffect")
+	USoundBase* UsePotion;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemEffect")
+	USoundBase* ChangeBattery;
 
 protected:
 	float CurrentInteractTime = 0.f;

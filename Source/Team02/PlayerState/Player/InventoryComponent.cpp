@@ -74,11 +74,6 @@ void UInventoryComponent::UseSlot(int32 SlotIndex)
 
 	FName ItemID = Items[SlotIndex].ItemID;
 
-	UE_LOG(LogTemp, Warning,
-		TEXT("UseSlot called on %s | ROLE=%d | ItemID=%s"),
-		*GetName(),
-		(int32)GetOwner()->GetLocalRole(),
-		*ItemID.ToString());
 
 	if (ItemID == NAME_None) return;
 
@@ -91,7 +86,8 @@ void UInventoryComponent::UseSlot(int32 SlotIndex)
 
 	if (ItemID == "Potion")
 	{
-		PS->ApplyHealByItem(10.f);
+		PS->ApplyHealByItem(40.f);
+		T2PC->Client_UsePotionEffect();
 
 		Items[SlotIndex].ItemID = NAME_None;
 		
@@ -102,6 +98,7 @@ void UInventoryComponent::UseSlot(int32 SlotIndex)
 		if (IsValid(FL) == true)
 		{
 			FL->AddBattery(30.f);
+			T2PC->Client_ChangeBatteryEffect();
 		}
 		
 		Items[SlotIndex].ItemID = NAME_None;

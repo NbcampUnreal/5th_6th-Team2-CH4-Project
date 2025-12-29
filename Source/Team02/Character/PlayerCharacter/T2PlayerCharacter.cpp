@@ -377,6 +377,8 @@ void AT2PlayerCharacter::OnInteractCompleted()
 		PC->StopInteractUI();
 	}
 
+	UGameplayStatics::PlaySound2D(this, ItemAcquisition);
+
 	Server_CompleteInteract(CurrentInteractItem);
 }
 
@@ -568,3 +570,12 @@ void AT2PlayerCharacter::Multicast_PlayFootstep_Implementation(const FVector& Lo
 	);
 }
 
+void AT2PlayerCharacter::Client_UsePotionEffect_Implementation()
+{
+	UGameplayStatics::PlaySound2D(this, UsePotion);
+}
+
+void AT2PlayerCharacter::Client_ChangeBatteryEffect_Implementation()
+{
+	UGameplayStatics::PlaySound2D(this, ChangeBattery);
+}
