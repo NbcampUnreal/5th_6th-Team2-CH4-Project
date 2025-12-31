@@ -30,11 +30,112 @@ void AT2BaseController::BeginPlay()
 
         if (MapName.Contains(TEXT("title")))
         {
-            ShowTitleUI();
+            // Reset all state when returning to title
+            ResetAllUIState();
+            
+            // Check if we need to auto-connect to host
+            // In PIE, client instances should try to connect to the host
+            UWorld* World = GetWorld();
+            if (World)
+            {
+                ENetMode NetMode = World->GetNetMode();
+                
+                // If standalone (not yet connected), try to connect after a short delay
+                // This gives the host time to start listening
+                if (NetMode == NM_Standalone)
+                {
+                    // Check PIE instance index - first instance (0) becomes host, others join
+                    int32 PIEInstance = GPlayInEditorID;
+                    
+                    if (PIEInstance > 0)
+                    {
+                        // Not the first instance - try to join the host
+                        UE_LOG(LogTemp, Warning, TEXT("PIE Instance %d - Will auto-join host in 1 second"), PIEInstance);
+                        
+                        FTimerHandle JoinTimer;
+                        World->GetTimerManager().SetTimer(JoinTimer, [this]()
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("Auto-joining host at 127.0.0.1"));
+                            ClientTravel(TEXT("127.0.0.1"), ETravelType::TRAVEL_Absolute);
+                        }, 1.0f, false);
+                    }
+                    else
+                    {
+                        // First instance - show title UI (host will be started by GameMode)
+                        UE_LOG(LogTemp, Warning, TEXT("PIE Instance 0 - This is the host"));
+                        ShowTitleUI();
+                    }
+                }
+                else
+                {
+                    // Already connected as client or listen server
+                    ShowTitleUI();
+                }
+            }
+            else
+            {
+                ShowTitleUI();
+            }
         }
 
         BindRoleChangedDelegate();
     }
+}
+
+void AT2BaseController::ResetAllUIState()
+{
+    UE_LOG(LogTemp, Warning, TEXT("ResetAllUIState: Cleaning up all UI"));
+
+    // Remove and null all widget instances
+    if (TitleWidgetInstance)
+    {
+        TitleWidgetInstance->RemoveFromParent();
+        TitleWidgetInstance = nullptr;
+    }
+
+    if (LobbyWidgetInstance)
+    {
+        LobbyWidgetInstance->RemoveFromParent();
+        LobbyWidgetInstance = nullptr;
+    }
+
+    if (PersonalResultInstance)
+    {
+        PersonalResultInstance->RemoveFromParent();
+        PersonalResultInstance = nullptr;
+    }
+
+    if (SettingsMenuInstance)
+    {
+        SettingsMenuInstance->RemoveFromParent();
+        SettingsMenuInstance = nullptr;
+    }
+
+    if (KillerHUDInstance)
+    {
+        KillerHUDInstance->RemoveFromParent();
+        KillerHUDInstance = nullptr;
+    }
+
+    if (SurvivorHUDInstance)
+    {
+        SurvivorHUDInstance->RemoveFromParent();
+        SurvivorHUDInstance = nullptr;
+    }
+
+    if (InteractWidgetClassInstance)
+    {
+        InteractWidgetClassInstance->RemoveFromParent();
+        InteractWidgetClassInstance = nullptr;
+    }
+
+    // Reset state flags
+    bIsSpectating = false;
+    bWasEscaped = false;
+    bHUDInitialized = false;
+    bIsSettingsMenuOpen = false;
+    bInteractUIActive = false;
+    CurrentDisplayedRole = EPlayerRole::None;
 }
 
 void AT2BaseController::ShowTitleUI()
@@ -49,10 +150,8 @@ void AT2BaseController::ShowTitleUI()
         return;
     }
 
-    if (!TitleWidgetInstance)
-    {
-        TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass);
-    }
+    // Always create fresh widget
+    TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass);
 
     if (TitleWidgetInstance)
     {
@@ -100,6 +199,18 @@ void AT2BaseController::TransitionToLobby()
     ShowLobbyUI();
 }
 
+void AT2BaseController::OnTitleStartButtonPressed()
+{
+    if (!IsLocalPlayerController()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("OnTitleStartButtonPressed Called"));
+
+    // Simply transition to lobby
+    // GameMode already started listen server in BeginPlay
+    // Other clients will auto-join via BeginPlay timer
+    TransitionToLobby();
+}
+
 void AT2BaseController::ShowLobbyUI()
 {
     if (!IsLocalPlayerController()) return;
@@ -110,10 +221,8 @@ void AT2BaseController::ShowLobbyUI()
         return;
     }
 
-    if (!LobbyWidgetInstance)
-    {
-        LobbyWidgetInstance = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
-    }
+    // Always create fresh widget
+    LobbyWidgetInstance = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
 
     if (LobbyWidgetInstance)
     {
@@ -359,6 +468,15 @@ void AT2BaseController::Client_OnGameStarted_Implementation()
     SetInputMode(InputMode);
 }
 
+void AT2BaseController::Client_OnPlayerCountChanged_Implementation(int32 NewCount)
+{
+    UE_LOG(LogTemp, Warning, TEXT("Client_OnPlayerCountChanged: %d players in lobby"), NewCount);
+    
+    // Update lobby UI if it exists
+    // The widget can bind to this or we can expose a function
+    // For now, just log - the widget can poll GetCurrentPlayerCount()
+}
+
 void AT2BaseController::CloseSettingsMenu()
 {
     if (SettingsMenuInstance && SettingsMenuInstance->IsInViewport())
@@ -375,9 +493,32 @@ void AT2BaseController::CloseSettingsMenu()
 
 void AT2BaseController::RequestLeaveGame()
 {
+    UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame: NetMode = %d"), (int32)GetNetMode());
+
+    // Check if we're in gameplay map - if so, ignore this call
+    // The server will handle returning to title via ReturnToTitle()
+    FString MapName = GetWorld()->GetMapName();
+    MapName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
+    
+    if (!MapName.Contains(TEXT("title")))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RequestLeaveGame: Ignored - not in title map. Server will handle return."));
+        return;
+    }
+
+    // Only allow leaving from title screen (e.g., settings menu -> quit)
     if (UWorld* World = GetWorld())
     {
-        UGameplayStatics::OpenLevel(World, TEXT("/Game/Team02/Blueprint/map/title"));
+        if (GetNetMode() == NM_Client)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Client: Disconnecting and returning to title"));
+            ClientTravel(TEXT("/Game/Team02/Blueprint/map/title"), ETravelType::TRAVEL_Absolute);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Host/Standalone: Loading title"));
+            UGameplayStatics::OpenLevel(World, TEXT("/Game/Team02/Blueprint/map/title"));
+        }
     }
 }
 
@@ -584,6 +725,19 @@ void AT2BaseController::Client_OnSpectateStarted_Implementation()
     FInputModeGameOnly InputMode;
     SetInputMode(InputMode);
     bShowMouseCursor = false;
+}
+
+void AT2BaseController::Client_ReturnToTitle_Implementation()
+{
+    UE_LOG(LogTemp, Warning, TEXT("=== Client_ReturnToTitle Called ==="));
+
+    if (!IsLocalPlayerController()) return;
+
+    // Clean up UI
+    ResetAllUIState();
+
+    // Disconnect from server and load title locally
+    ClientTravel(TEXT("/Game/Team02/Blueprint/map/title"), ETravelType::TRAVEL_Absolute);
 }
 
 APawn* AT2BaseController::GetAliveTarget()

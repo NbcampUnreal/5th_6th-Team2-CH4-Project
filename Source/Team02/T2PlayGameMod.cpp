@@ -8,6 +8,7 @@
 #include "Gimmick/ItemSpawner.h"
 #include "EngineUtils.h"
 #include "Controller/T2BaseController.h"
+#include "GameFramework/GameSession.h"
 
 AT2PlayGameMod::AT2PlayGameMod()
 {
@@ -142,16 +143,16 @@ void AT2PlayGameMod::AssignRolesIfReady()
 
         if (SpawnPoint && PawnClass)
         {
-            FVector SpawnLoc = SpawnPoint->GetActorLocation();
-            FRotator SpawnRot = SpawnPoint->GetActorRotation();
+            FVector SpawnLocation = SpawnPoint->GetActorLocation();
+            FRotator SpawnRotation = SpawnPoint->GetActorRotation();
 
             FActorSpawnParameters SpawnParams;
             SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
             APawn* NewPawn = GetWorld()->SpawnActor<APawn>(
                 PawnClass,
-                SpawnLoc,
-                SpawnRot,
+                SpawnLocation,
+                SpawnRotation,
                 SpawnParams
             );
 
@@ -284,6 +285,12 @@ void AT2PlayGameMod::OnCharacterDead(APlayerController* DeadPlayerController)
         UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive decreased to: %d"), GS->SurvivorsAlive);
     }
 
+    // Show personal result to dead player
+    if (AT2BaseController* T2PC = Cast<AT2BaseController>(DeadPlayerController))
+    {
+        T2PC->Client_ShowPersonalResult(false);  // false = died
+    }
+
     CheckWinConditions();
 }
 
@@ -298,7 +305,10 @@ void AT2PlayGameMod::OnPlayerEscaped(APlayerController* Player)
 
     UE_LOG(LogTemp, Warning, TEXT("Player Escaped!"));
 
-    // Note: GameState count is handled in SurvivorPlayerState::SetEscaped()
+    if (AT2PlayGameState* GS = GetGameState<AT2PlayGameState>())
+    {
+        GS->OnSurvivorEscaped();
+    }
 
     CheckWinConditions();
 }
@@ -323,7 +333,6 @@ void AT2PlayGameMod::CheckWinConditions()
     UE_LOG(LogTemp, Warning, TEXT("SurvivorsAlive: %d, SurvivorsEscaped: %d, TotalSurvivors: %d"),
         GS->SurvivorsAlive, GS->SurvivorsEscaped, GS->TotalSurvivors);
 
-    // Only end game when ALL survivors are dead or escaped
     if (GS->SurvivorsAlive <= 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("No survivors alive!"));
@@ -357,44 +366,76 @@ void AT2PlayGameMod::EndMatch(EMatchResult Result)
 
     FString ResultStr;
     bool bSurvivorWin = false;
-    
     switch (Result)
     {
-    case EMatchResult::KillerWin:
-        ResultStr = TEXT("Killer Wins!");
+    case EMatchResult::KillerWin:   
+        ResultStr = TEXT("Killer Wins!"); 
         bSurvivorWin = false;
         break;
-    case EMatchResult::SurvivorWin:
-        ResultStr = TEXT("Survivors Win!");
+    case EMatchResult::SurvivorWin: 
+        ResultStr = TEXT("Survivors Win!"); 
         bSurvivorWin = true;
         break;
-    default:
-        ResultStr = TEXT("Draw");
-        bSurvivorWin = false;
+    default: 
+        ResultStr = TEXT("Draw"); 
         break;
     }
 
     UE_LOG(LogTemp, Warning, TEXT("=== MATCH ENDED: %s ==="), *ResultStr);
 
-    // Show result to all players
-    for (APlayerController* PC : ConnectedPlayers)
+    // Show match result to all players
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
-        if (AT2BaseController* T2PC = Cast<AT2BaseController>(PC))
+        if (AT2BaseController* T2PC = Cast<AT2BaseController>(It->Get()))
         {
             T2PC->Client_ShowMatchResult(bSurvivorWin);
         }
     }
 
-    // Travel to title after 5 seconds
+    // Return to title after delay
     FTimerHandle TimerHandle;
     GetWorldTimerManager().SetTimer(TimerHandle, [this]()
         {
-            UWorld* World = GetWorld();
-            if (World)
+            ReturnToTitle();
+        }, 5.0f, false);  // 5 seconds to see results
+}
+
+void AT2PlayGameMod::ReturnToTitle()
+{
+    if (!HasAuthority()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("=== ReturnToTitle Called ==="));
+
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    // STEP 1: Notify all clients to disconnect and go to their own title
+    for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (PC && !PC->IsLocalPlayerController())
+        {
+            // Tell remote clients to go to title on their own
+            if (AT2BaseController* T2PC = Cast<AT2BaseController>(PC))
             {
-                World->ServerTravel(TEXT("/Game/Team02/Blueprint/map/title?listen"));
+                T2PC->Client_ReturnToTitle();
             }
-        }, 5.0f, false);
+        }
+    }
+
+    // STEP 2: After a short delay, host goes to title
+    // This gives clients time to disconnect gracefully
+    FTimerHandle HostTitleTimer;
+    GetWorldTimerManager().SetTimer(HostTitleTimer, [this]()
+    {
+        UWorld* World = GetWorld();
+        if (World)
+        {
+            // Destroy the listen server and load title as standalone
+            UE_LOG(LogTemp, Warning, TEXT("Host loading title map"));
+            UGameplayStatics::OpenLevel(World, TEXT("/Game/Team02/Blueprint/map/title"));
+        }
+    }, 0.5f, false);
 }
 
 void AT2PlayGameMod::OnKeyCollected(int32 CurrentTotalKeys)
@@ -425,7 +466,7 @@ void AT2PlayGameMod::SpawnPortalAtRandomLocation()
         return;
     }
 
-    FVector SpawnLoc = FVector::ZeroVector;
+    FVector SpawnLocation = FVector::ZeroVector;
     bool bFoundLocation = false;
 
     UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
@@ -434,7 +475,7 @@ void AT2PlayGameMod::SpawnPortalAtRandomLocation()
         FNavLocation RandomLocation;
         if (NavSys->GetRandomReachablePointInRadius(FVector::ZeroVector, 5000.f, RandomLocation))
         {
-            SpawnLoc = RandomLocation.Location + FVector(0, 0, 100);
+            SpawnLocation = RandomLocation.Location + FVector(0, 0, 100);
             bFoundLocation = true;
         }
     }
@@ -447,12 +488,12 @@ void AT2PlayGameMod::SpawnPortalAtRandomLocation()
         if (PlayerStarts.Num() > 0)
         {
             int32 RandomIndex = FMath::RandRange(0, PlayerStarts.Num() - 1);
-            SpawnLoc = PlayerStarts[RandomIndex]->GetActorLocation() + FVector(500, 500, 100);
+            SpawnLocation = PlayerStarts[RandomIndex]->GetActorLocation() + FVector(500, 500, 100);
             bFoundLocation = true;
         }
         else
         {
-            SpawnLoc = FVector(0, 0, 100);
+            SpawnLocation = FVector(0, 0, 100);
             bFoundLocation = true;
         }
     }
@@ -464,7 +505,7 @@ void AT2PlayGameMod::SpawnPortalAtRandomLocation()
         
         APortalActor* Portal = GetWorld()->SpawnActor<APortalActor>(
             PortalClass, 
-            SpawnLoc, 
+            SpawnLocation, 
             FRotator::ZeroRotator, 
             SpawnParams
         );
@@ -475,7 +516,7 @@ void AT2PlayGameMod::SpawnPortalAtRandomLocation()
             Portal->ActivatePortal();
             
             UE_LOG(LogTemp, Warning, TEXT("Portal spawned successfully at %s! Duration: %.0f seconds"), 
-                *SpawnLoc.ToString(), PortalDuration);
+                *SpawnLocation.ToString(), PortalDuration);
         }
     }
 }

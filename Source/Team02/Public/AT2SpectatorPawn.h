@@ -67,7 +67,7 @@ private:
 
 	// Current camera rotation
 	float CurrentYaw = 0.0f;
-	float CurrentPitch = -25.0f;
+	float CurrentPitch = -30.0f;  // 위에서 내려다보기
 
 	// Log spam prevention
 	bool bLoggedTargetInvalid = false;
