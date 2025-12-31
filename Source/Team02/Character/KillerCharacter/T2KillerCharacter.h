@@ -4,7 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Character/T2BaseCharacter.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "T2KillerCharacter.generated.h"
+
+class USoundBase;
+class UCameraComponent;
+class UStaticMeshComponent;
+class UT2CooldownComponent;
+class UUW_KillerHUD;
+class UT2FogComponent;
+class UT2KillerDetectionComponent;
 
 /**
  * 
@@ -18,6 +27,8 @@ class TEAM02_API AT2KillerCharacter : public AT2BaseCharacter
 	AT2KillerCharacter();
 
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
@@ -37,10 +48,31 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FPSCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* CameraBoom; 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* ThirdPersonCamera; 
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", Replicated) 
+	TObjectPtr<UT2CooldownComponent> CooldownComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<class UAudioComponent> BreathingAudioComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+	TObjectPtr<class USoundBase> BreathingSound;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "KillerEffects")
+	TObjectPtr<class USpotLightComponent> KillerVisionLight;
+	
 #pragma endregion
 
 #pragma region Killer Input
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> ToggleCameraAction;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> LandTrapAction;
@@ -50,10 +82,24 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UInputAction> DashAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> WalkAction;
 	
 	void HandleLandTrapInput(const FInputActionValue& InValue);
 	void InputAttack(const FInputActionValue& InValue);
 	void InputDash(const FInputActionValue& InValue);
+	void ToggleCameraView(const FInputActionValue& InValue);
+
+	void StartWalk();
+	void EndWalk();
+	
+#pragma endregion
+
+#pragma region Camera View System
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Camera")
+	bool bIsFirstPerson = true;
 #pragma endregion
 
 #pragma region Attack System
@@ -61,20 +107,40 @@ public:
 	UFUNCTION(BlueprintCallable) 
 	void AttackEnd();
 
+	UFUNCTION(BlueprintCallable)
+	void OnHitSuccessful(APawn* VictimPawn, const FVector& ImpactPoint);
+	
+	void PlayAttackHitSound(const FVector& Location);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayHitSound(FVector ImpactLocation);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayAttackMontage();
+
+	void ResetHitActors();
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Attack")
 	UAnimMontage* AttackMontage;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsAttacking)
+	UPROPERTY(EditDefaultsOnly, Category="Attack")
+	TObjectPtr<USoundBase> AttackSwingSound;
+
+	UPROPERTY(EditDefaultsOnly, Category="Attack") 
+	TObjectPtr<USoundBase> AttackHitSound;
+
+	UPROPERTY(Replicated)
 	bool bIsAttacking = false;
 
 	FTimerHandle AttackTimerHandle;
 
-	UFUNCTION()
-	void OnRep_IsAttacking();
-
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
+
+	UPROPERTY()
+	TArray<AActor*> HitActorsThisAttack;
+
 #pragma endregion
 	
 #pragma region LandTrap System
@@ -82,44 +148,90 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCSpawnLandTrap();
 
-	UFUNCTION()
-	void ClearLandTrapCooldown();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnLandTrapSuccess();
+    
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnLandTrapDenied();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="LandTrap")
 	TSubclassOf<AActor> LandTrapClass;
 
-	UPROPERTY(Replicated) 
-	bool bIsLandTrapOnCooldown = false;
-
 	UPROPERTY(EditDefaultsOnly, Category = "LandTrap")
-	float LandTrapCooldownDuration = 15.0f;
+	TObjectPtr<USoundBase> LandTrapSound;
 
-private:
-	FTimerHandle LandTrapCooldownTimerHandle;
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UT2KillerDetectionComponent> DetectionComponent;
 
-	UPROPERTY(Replicated) 
-	float LandTrapCooldownEndTime = 0.0f;
 #pragma endregion
 
-#pragma region Dash System;
+#pragma region Dash System
 protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCDash();
 
-	void ClearDashCooldown();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnDashSuccess();
+    
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnDashDenied();
 
-	UPROPERTY(Replicated)
-	bool bIsDashOnCooldown = false;
-
+protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashCooldownDuration = 3.0f;
+	float DashDuration = 0.25f;
 
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashImpulseStrength = 2000.0f; 
+	UPROPERTY(EditDefaultsOnly, Category = "Dash")
+	TObjectPtr<USoundBase> DashSound;
+	
+	FTimerHandle DashTimerHandle;
+	
+	float DefaultFOV = 90.0f;
+	float TargetFOV = 110.0f;
+	
+	bool bIsDashing = false;
 
+#pragma endregion
+
+#pragma region Walk System
+public:
+	UFUNCTION(BlueprintCallable, Category = "Footstep")
+	void PlayFootstepSound(bool bIsLeftFoot);
+	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", ReplicatedUsing=OnRep_IsWalking)
+	bool bIsWalking = false;
+
+	UFUNCTION()
+	void OnRep_IsWalking();
+
+	UFUNCTION(Server, Reliable)
+	void ServerToggleWalk(bool bNewIsWalking);
+
+	void UpdateMovementSpeed();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WalkSpeedMultiplier = 0.20f; 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float BaseMaxWalkSpeed = 500.0f;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Footstep")
+	TObjectPtr<USoundBase> FootstepSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Footstep", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WalkVolumeMultiplier = 0.15f;
+
+#pragma endregion
+
+#pragma region Fog System
 private:
-	FTimerHandle DashCooldownTimerHandle;
-
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USceneComponent> FootAnchor;
+    
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UT2FogComponent> FootFog;
 #pragma endregion 
 };

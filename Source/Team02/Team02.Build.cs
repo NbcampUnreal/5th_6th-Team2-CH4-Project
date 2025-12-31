@@ -10,10 +10,10 @@ public class Team02 : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
-			
-			
-		});
+			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","UMG","Niagara","NavigationSystem",
+
+
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 		

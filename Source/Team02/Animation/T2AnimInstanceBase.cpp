@@ -2,7 +2,6 @@
 
 
 #include "Animation/T2AnimInstanceBase.h"
-
 #include "Character/T2BaseCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -32,4 +31,7 @@ void UT2AnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	bShouldMove = (!OwnerCharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero()) && (GroundSpeed > 3.f);
 	
 	bIsFalling = OwnerCharacterMovementComponent->IsFalling();
+
+	bIsCrouching = OwnerCharacter->bIsCrouched;
+
 }

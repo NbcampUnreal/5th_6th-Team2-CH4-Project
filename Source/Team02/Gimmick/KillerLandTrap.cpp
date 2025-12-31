@@ -3,10 +3,13 @@
 
 #include "Gimmick/KillerLandTrap.h"
 
+#include "Character/KillerCharacter/T2KillerCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerState/Player/SurvivorPlayerState.h"
 
 
 AKillerLandTrap::AKillerLandTrap()
@@ -30,33 +33,11 @@ AKillerLandTrap::AKillerLandTrap()
 	Particle->SetAutoActivate(false);
 
 	SetNetCullDistanceSquared(NetCullDistance * NetCullDistance);
-
-	//bAlwaysRelevant = true;
 }
 
 void AKillerLandTrap::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (HasAuthority() == true)
-	{
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on server.")), true, true, FLinearColor::Green, 5.f);
-	}
-	else
-	{
-		APawn* OwnerPawn = Cast<APawn>(GetOwner());
-		if (IsValid(OwnerPawn) == true)
-		{
-			if (OwnerPawn->IsLocallyControlled() == true)
-			{
-				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on owning client.")), true, true, FLinearColor::Green, 5.f);
-			}
-			else
-			{
-				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on other client.")), true, true, FLinearColor::Green, 5.f);
-			}
-		}
-	}
 
 	if (false == OnActorBeginOverlap.IsAlreadyBound(this, &ThisClass::OnLandTrapBeginOverlap))
 	{
@@ -68,8 +49,6 @@ void AKillerLandTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("ADXLandMine::EndPlay()")), true, true, FLinearColor::Green, 5.f);
-
 	if (true == OnActorBeginOverlap.IsAlreadyBound(this, &ThisClass::OnLandTrapBeginOverlap))
 	{
 		OnActorBeginOverlap.RemoveDynamic(this, &ThisClass::OnLandTrapBeginOverlap);
@@ -78,32 +57,43 @@ void AKillerLandTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AKillerLandTrap::OnLandTrapBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
+	if (OtherActor && OtherActor->IsA<AT2KillerCharacter>())
+	{
+		return;
+	}
+    
 	if (HasAuthority() == true)
 	{
-		if (bIsExploded == true)
+		if (bIsExploded == true) return; 
+
+		if (APawn* TargetPawn = Cast<APawn>(OtherActor))
 		{
-			return; 
+			if (ASurvivorPlayerState* SurvivorPS = TargetPawn->GetPlayerState<ASurvivorPlayerState>())
+			{
+				SurvivorPS->ApplyTrapDebuff(TrapDamage, SpeedReductionMultiplier, SpeedDebuffDuration, VisionDebuffDuration);
+			}
 		}
 
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Run on server. Activating One-Time Trap.")), true, true, FLinearColor::Green, 5.f);
-
 		bIsExploded = true;
+		OnRep_IsExploded(); 
         
 		MulticastRPCSpawnEffect();
 
-		Destroy(); 
-	}
-	else
-	{
-		if (bIsExploded == false)
-		{
-			Particle->Activate(true); 
-		}
+		SetLifeSpan(2.0f); 
 	}
 }
 
 void AKillerLandTrap::MulticastRPCSpawnEffect_Implementation()
 {
+	if (Particle)
+	{
+		Particle->Activate(true);
+	}
+
+	if (TrapExplosionSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, TrapExplosionSound, GetActorLocation());
+	}
 }
 
 void AKillerLandTrap::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

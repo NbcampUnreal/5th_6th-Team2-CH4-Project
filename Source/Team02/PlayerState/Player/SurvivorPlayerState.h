@@ -1,0 +1,95 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "PlayerState/T2PlayerState.h"
+#include "SurvivorPlayerState.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVisionDebuffChanged, bool, bIsActive);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, float, float);
+
+class UInventoryComponent;
+
+UCLASS()
+class TEAM02_API ASurvivorPlayerState : public AT2PlayerState
+{
+    GENERATED_BODY()
+
+public:
+    ASurvivorPlayerState();
+
+    virtual void BeginPlay() override;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HP")
+    float MaxHP = 100.f;
+
+    UPROPERTY(ReplicatedUsing = OnRep_HP, BlueprintReadOnly, Category = "HP")
+    float CurrentHP;
+
+    FOnHPChanged OnHPChanged;
+
+    void ApplyDamage(float DamageAmount);
+    
+    void ApplyHealByItem(float HealAmount);
+
+    UPROPERTY(ReplicatedUsing = OnRep_IsDead, BlueprintReadOnly, Category = "Status")
+    bool bIsDead = false;
+
+    UPROPERTY(Replicated, BlueprintReadOnly, Category = "Status")
+    bool bIsEscaped = false;
+
+    UPROPERTY(Replicated, BlueprintReadOnly, Category = "Status")
+    int32 DownCount = 0;  
+
+    void SetEscaped();
+
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+    TObjectPtr<UInventoryComponent> InventoryComponent;
+
+protected:
+    UFUNCTION()
+    void OnRep_HP();
+
+    UFUNCTION()
+    void OnRep_IsDead();
+
+#pragma region Debuffed
+public:
+    void ApplyTrapDebuff(float Damage, float SpeedMult, float SpeedDur, float VisionDur);
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnVisionDebuffChanged OnVisionDebuffChanged;
+
+    float GetSpeedMultiplier() const { return bIsSpeedDebuffed ? CurrentSpeedMultiplier : 1.0f; }
+
+    UFUNCTION(BlueprintCallable, Category = "Status")
+    bool IsDetectedByKiller() const { return bIsVisionDebuffed; }
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnVisionDebuffChanged OnDetectionStatusChanged;
+
+protected:
+    UPROPERTY(ReplicatedUsing = OnRep_UpdateSpeed)
+    bool bIsSpeedDebuffed = false;
+    
+    UPROPERTY(Replicated)  
+    float CurrentSpeedMultiplier = 1.0f;
+    
+    UPROPERTY(ReplicatedUsing = OnRep_VisionDebuff)
+    bool bIsVisionDebuffed = false;
+
+    FTimerHandle SpeedDebuffTimerHandle;
+    FTimerHandle VisionDebuffTimerHandle;
+
+    void ResetSpeedDebuff();
+    void ResetVisionDebuff();
+
+    UFUNCTION()
+    void OnRep_UpdateSpeed();
+
+    UFUNCTION()
+    void OnRep_VisionDebuff();
+
+#pragma endregion
+};
